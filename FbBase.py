@@ -16,7 +16,7 @@ class FbBase(object):
             logger              --  logger *optional*
 
         """
-        if ('accessToken') not in kwargs:
+        if 'accessToken' not in kwargs:
             raise ValueError('Invalid parameters.')
         self.accessToken = kwargs['accessToken']
         self.logger = kwargs['logger'] if 'logger' in kwargs else FbBase.MockLogger()
