@@ -3,7 +3,14 @@ import json
 from FbBase import FbBase
 
 class FbUserInfo(FbBase):
-    def getMyName(self):
+    def __init__(self, *args, **kwargs):
+        """
+        Constructor of FbUserInfo
+        """
+        FbBase.__init__(self, *args, **kwargs)
+        self.name, self.email = self._cacheMyInfo()
+
+    def _cacheMyInfo(self):
         uri = urllib.basejoin(self.graphUri, '/me')
         uri += '?{0}'.format(urllib.urlencode({
             'access_token': self.accessToken,
@@ -13,33 +20,20 @@ class FbUserInfo(FbBase):
             resp = json.loads(conn.read())
         except urllib2.URLError as e:
             self.logger.error('Unable to get data from Facebook. e[{0}]'.format(e))
-            return None
+            return None, None
         except ValueError as e:
             self.logger.error('Unable to parse returned data. e[{0}]'.format(e))
-            return None
-        if 'name' not in resp:
-            self.logger.error('Unable to get name attribute from returned data. resp[{0}]'.format(json.dumps(resp)))
-            return None
-        return resp['name']
+            return None, None
+        if 'name' not in resp or 'email' not in resp:
+            self.logger.error('Unable to get name or email attribute from returned data. resp[{0}]'.format(json.dumps(resp)))
+            return None, None
+        return resp['name'], resp['email']
+
+    def getMyName(self):
+        return self.name
 
     def getMyEmail(self):
-        uri = urllib.basejoin(self.graphUri, '/me')
-        uri += '?{0}'.format(urllib.urlencode({
-            'access_token': self.accessToken,
-        }))
-        try:
-            conn = urllib2.urlopen(uri, timeout=self._timeout)
-            resp = json.loads(conn.read())
-        except urllib2.URLError as e:
-            self.logger.error('Unable to get data from Facebook. e[{0}]'.format(e))
-            return None
-        except ValueError as e:
-            self.logger.error('Unable to parse returned data. e[{0}]'.format(e))
-            return None
-        if 'email' not in resp:
-            self.logger.error('Unable to get email attribute from returned data. resp[{0}]'.format(json.dumps(resp)))
-            return None
-        return resp['email']
+        return self.email
 
     def getMyAvatar(self, type='square'):
         """
