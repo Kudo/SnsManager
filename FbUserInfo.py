@@ -19,6 +19,7 @@ class FbUserInfo(FbBase):
             return None
         if 'name' not in resp:
             self.logger.error('Unable to get name attribute from returned data. resp[{0}]'.format(json.dumps(resp)))
+            return None
         return resp['name']
 
     def getMyEmail(self):
@@ -37,6 +38,7 @@ class FbUserInfo(FbBase):
             return None
         if 'email' not in resp:
             self.logger.error('Unable to get email attribute from returned data. resp[{0}]'.format(json.dumps(resp)))
+            return None
         return resp['email']
 
     def getMyAvatar(self, type='square'):
