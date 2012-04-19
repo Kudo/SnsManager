@@ -13,6 +13,7 @@ An python module to retrieve Facebook's data based on Graph API.
 3. Usage
 ---------------------
 - To retrieve personal information
+
 ```python
 from FbUserInfo import FbUserInfo
 
