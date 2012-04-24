@@ -26,9 +26,10 @@ class FbBase(object):
         self._timeout = kwargs.get('timeout', 60)
 
 class FbErrorCode(object):
-    S_OK=0x00000000
+    S_OK=           (0x00000000,    'Success')
 
-    E_FAILED=0x10000000
+    E_FAILED=       (0x10000000,    'Generic error')
+    E_NO_DATA=      (0x10000001,    'No more data')
 
     @classmethod
     def IS_SUCCEEDED(cls, errorCode):
@@ -36,6 +37,6 @@ class FbErrorCode(object):
 
     @classmethod
     def IS_FAILED(cls, errorCode):
-        if (errorCode >> 28) & 1:
+        if (errorCode[0] >> 28) & 1:
             return True
         return False

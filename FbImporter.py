@@ -53,7 +53,6 @@ class FbImporter(FbBase):
                 ],
                 'count': 30,                    # count in data list
                 'retCode': FbErrorCode.S_OK,    # returned code which is instance of FbErrorCode
-                'retDesc: "OK",                 # Non-localized of returned description
                 'lastTime': <datetime object>,  # if direction is FORWARD, the value is the oldest feed time
                                                 # Otherwise, the value is the latest feed time
 
@@ -72,24 +71,32 @@ class FbImporter(FbBase):
             else:
                 params['until'] = self._datetime2Timestamp(datetime.now())
 
+        retDict = {
+            'retCode': FbErrorCode.E_FAILED,
+            'count': 0,
+            'data': {},
+        }
+
         uri = '{0}me/feed?{1}'.format(self._graphUri, urllib.urlencode(params))
         self._logger.debug('FbImporter::getData() uri to retrieve [%s]' % uri)
         conn = urllib2.urlopen(uri, timeout=self._timeout)
         feedData = json.loads(conn.read())
+        if 'data' not in feedData or 'paging' not in feedData:
+            retDict['retCode'] = FbErrorCode.E_NO_DATA
+            return retDict
+
         feedHandler = FbFeedsHandler(tmpFolder=self._tmpFolder,
             myFbId=FbUserInfo(accessToken=self._accessToken).getMyId(),
             accessToken=self._accessToken,
-            feeds=feedData)
+            feeds=feedData,
+            logger=self._logger,
+            )
         handledData = feedHandler.doAction()
 
-        retDict = {}
-        retDict['retCode'] = FbErrorCode.E_FAILED
-        retDict['retDesc'] = 'TBD'
         retDict['data'] = handledData
         retDict['count'] = len(retDict['data'])
-        if retDict['count'] > 0:
+        if handledData is not None:
             retDict['retCode'] = FbErrorCode.S_OK
-            retDict['retDesc'] = 'TBD'
 
         if direction is FbImporter.DIRECTION.FORWARD:
             ts = urlparse.parse_qs(urlparse.urlsplit(feedData['paging']['previous']).query)['since'][0]
@@ -119,7 +126,7 @@ class FbFeedsHandler(FbBase):
                 continue
             parsedData = self._feedParser(feed)
             if parsedData:
-                #self._dumpData(parsedData)
+                self._dumpData(parsedData)
                 retData.append(parsedData)
         return retData
 
@@ -161,13 +168,13 @@ class FbFeedsHandler(FbBase):
         return False
 
     def _dumpData(self, data):
-        print u"\ncreatedTime[{0}]\nupdatedTime[{1}]\nmessage[{2}]\nlinks[{3}]\nphotos[{4}]\n".format(
+        self._logger.debug(u"\ncreatedTime[{0}]\nupdatedTime[{1}]\nmessage[{2}]\nlinks[{3}]\nphotos[{4}]\n".format(
                 data['createdTime'].isoformat(),
                 data['updatedTime'].isoformat(),
                 data['message'],
                 data['links'],
                 data['photos'],
-        ).encode('utf-8')
+        ).encode('utf-8'))
 
     def _imgLinkHandler(self, uri):
         fPath = None
