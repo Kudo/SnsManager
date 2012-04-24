@@ -17,13 +17,21 @@ class TestFbImporter(unittest.TestCase):
         obj = FbImporter(accessToken=TEST_TOKEN)
         resp = obj.getData()
         self.assertIn('retCode', resp)
-        self.assertIsInstance(resp['retCode'], FbErrorCode)
         self.assertIn('retDesc', resp)
         self.assertIn('data', resp)
         self.assertTrue(type(resp['data']), list)
         self.assertIn('count', resp)
         self.assertTrue(type(resp['count']), int)
-        self.assertTrue(obj.getData())
+
+    def test_GetDataBackward_ReturnValidFormat(self):
+        obj = FbImporter(accessToken=TEST_TOKEN)
+        resp = obj.getData(direction=FbImporter.DIRECTION.BACKWARD)
+        self.assertIn('retCode', resp)
+        self.assertIn('retDesc', resp)
+        self.assertIn('data', resp)
+        self.assertTrue(type(resp['data']), list)
+        self.assertIn('count', resp)
+        self.assertTrue(type(resp['count']), int)
 
 if __name__ == '__main__':
     suite = unittest.TestLoader().loadTestsFromTestCase(TestFbImporter)

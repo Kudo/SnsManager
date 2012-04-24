@@ -8,32 +8,35 @@ class FbUserInfo(FbBase):
         Constructor of FbUserInfo
         """
         FbBase.__init__(self, *args, **kwargs)
-        self.name, self.email = self._cacheMyInfo()
+        self.myName, self.myEmail, self.myId = self._cacheMyInfo()
 
     def _cacheMyInfo(self):
-        uri = urllib.basejoin(self.graphUri, '/me')
+        uri = urllib.basejoin(self._graphUri, '/me')
         uri += '?{0}'.format(urllib.urlencode({
-            'access_token': self.accessToken,
+            'access_token': self._accessToken,
         }))
         try:
             conn = urllib2.urlopen(uri, timeout=self._timeout)
             resp = json.loads(conn.read())
         except urllib2.URLError as e:
-            self.logger.error('Unable to get data from Facebook. e[{0}]'.format(e))
+            self._logger.error('Unable to get data from Facebook. e[{0}]'.format(e))
             return None, None
         except ValueError as e:
-            self.logger.error('Unable to parse returned data. e[{0}]'.format(e))
+            self._logger.error('Unable to parse returned data. e[{0}]'.format(e))
             return None, None
-        if 'name' not in resp or 'email' not in resp:
-            self.logger.error('Unable to get name or email attribute from returned data. resp[{0}]'.format(json.dumps(resp)))
+        if 'name' not in resp or 'email' not in resp or 'id' not in resp:
+            self._logger.error('Unable to get name or email attribute from returned data. resp[{0}]'.format(json.dumps(resp)))
             return None, None
-        return resp['name'], resp['email']
+        return resp['name'], resp['email'], resp['id']
 
     def getMyName(self):
-        return self.name
+        return self.myName
 
     def getMyEmail(self):
-        return self.email
+        return self.myEmail
+
+    def getMyId(self):
+        return self.myId
 
     def getMyAvatar(self, type='square'):
         """
@@ -45,15 +48,15 @@ class FbUserInfo(FbBase):
             normal (100 pixels wide, variable height), 
             and large (about 200 pixels wide, variable height) 
         """
-        uri = urllib.basejoin(self.graphUri, '/me/picture')
+        uri = urllib.basejoin(self._graphUri, '/me/picture')
         uri += '?{0}'.format(urllib.urlencode({
-            'access_token': self.accessToken,
+            'access_token': self._accessToken,
             'type': type,
         }))
         try:
             conn = urllib2.urlopen(uri, timeout=self._timeout)
             imgUri = conn.geturl() # Facebook will trigger redirect and we need the uri not the data
         except urllib2.URLError as e:
-            self.logger.error('Unable to get data from Facebook. e[{0}]'.format(e))
+            self._logger.error('Unable to get data from Facebook. e[{0}]'.format(e))
             return None
         return imgUri

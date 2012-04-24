@@ -18,11 +18,12 @@ class FbBase(object):
         """
         if 'accessToken' not in kwargs:
             raise ValueError('Invalid parameters.')
-        self.accessToken = kwargs['accessToken']
-        self.logger = kwargs['logger'] if 'logger' in kwargs else FbBase.MockLogger()
+        self._accessToken = kwargs['accessToken']
+        self._logger = kwargs.get('logger', FbBase.MockLogger())
 
-        self.graphUri = 'https://graph.facebook.com/'
-        self._timeout = 10
+        self._graphUri = 'https://graph.facebook.com/'
+        self._timeout = 60
+        self._timeout = kwargs.get('timeout', 60)
 
 class FbErrorCode(object):
     S_OK=0x00000000
