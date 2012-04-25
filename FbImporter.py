@@ -92,7 +92,7 @@ class FbImporter(FbBase):
                 logger=self._logger,
                 )
             parsedData = feedHandler.parse()
-            retDict['data'].append(parsedData)
+            retDict['data'] += parsedData
 
             since = urlparse.parse_qs(urlparse.urlsplit(feedData['paging']['next']).query)['until'][0]
             since = datetime.fromtimestamp(int(since))
