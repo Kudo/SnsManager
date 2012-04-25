@@ -68,6 +68,10 @@ class FbImporter(FbBase):
         if not until:
             until = datetime.now() - timedelta(1)
 
+        fbId = FbUserInfo(accessToken=self._accessToken, logger=self._logger).getMyId()
+        if not fbId:
+            return retDict
+
         errorCode, feedData = self._pageCrawler(since, until)
         failoverCount = 0
         failoverThreshold = 3
@@ -86,7 +90,7 @@ class FbImporter(FbBase):
                     return retDict
 
             feedHandler = FbFeedsHandler(tmpFolder=self._tmpFolder,
-                myFbId=FbUserInfo(accessToken=self._accessToken, logger=self._logger).getMyId(),
+                myFbId=fbId,
                 accessToken=self._accessToken,
                 feeds=feedData,
                 logger=self._logger,
