@@ -24,7 +24,7 @@ class FbUserInfo(FbBase):
         except ValueError as e:
             self._logger.error('Unable to parse returned data. e[{0}]'.format(e))
             return None, None
-        if 'name' not in resp or 'email' not in resp or 'id' not in resp:
+        if resp and ('name' not in resp or 'email' not in resp or 'id' not in resp):
             self._logger.error('Unable to get name or email attribute from returned data. resp[{0}]'.format(json.dumps(resp)))
             return None, None
         return resp['name'], resp['email'], resp['id']
