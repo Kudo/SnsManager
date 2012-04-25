@@ -36,6 +36,6 @@ if FbErrorCode.IS_SUCCEEDED(retDict['retCode']):
 	...
     count = retDict['count']
 else:
-    reason = retDict['retDesc']
+    print retDict['retCode']
 ```
 
