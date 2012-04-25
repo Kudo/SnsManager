@@ -9,8 +9,10 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), os.path.
 from FbBase import FbErrorCode
 from FbImporter import FbImporter
 import unittest
+import logging
 
 TEST_TOKEN = 'AccessToken'
+
 
 class TestFbImporter(unittest.TestCase):
     def test_GetData_ReturnValidFormat(self):
@@ -19,15 +21,6 @@ class TestFbImporter(unittest.TestCase):
         self.assertIn('retCode', resp)
         self.assertEqual(resp['retCode'], FbErrorCode.S_OK)
         self.assertTrue(FbErrorCode.IS_SUCCEEDED(resp['retCode']))
-        self.assertIn('data', resp)
-        self.assertTrue(type(resp['data']), list)
-        self.assertIn('count', resp)
-        self.assertTrue(type(resp['count']), int)
-
-    def test_GetDataBackward_ReturnValidFormat(self):
-        obj = FbImporter(accessToken=TEST_TOKEN)
-        resp = obj.getData(direction=FbImporter.DIRECTION.BACKWARD)
-        self.assertIn('retCode', resp)
         self.assertIn('data', resp)
         self.assertTrue(type(resp['data']), list)
         self.assertIn('count', resp)

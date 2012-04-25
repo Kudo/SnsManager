@@ -19,14 +19,14 @@ class FbUserInfo(FbBase):
             conn = urllib2.urlopen(uri, timeout=self._timeout)
             resp = json.loads(conn.read())
         except urllib2.URLError as e:
-            self._logger.error('Unable to get data from Facebook. e[{0}]'.format(e))
-            return None, None
+            self._logger.error('Unable to get data from Facebook. uri[{0}] e[{0}]'.format(uri, e))
+            return None, None, None
         except ValueError as e:
             self._logger.error('Unable to parse returned data. e[{0}]'.format(e))
-            return None, None
+            return None, None, None
         if resp and ('name' not in resp or 'email' not in resp or 'id' not in resp):
             self._logger.error('Unable to get name or email attribute from returned data. resp[{0}]'.format(json.dumps(resp)))
-            return None, None
+            return None, None, None
         return resp['name'], resp['email'], resp['id']
 
     def getMyName(self):
