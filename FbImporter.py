@@ -47,7 +47,8 @@ class FbImporter(FbBase):
                 'data': [               # List of data
                     {
                         'id': 'postId',
-                        'message': 'Text',
+                        'message': 'Text',                      # None if no message from Facebook
+                        'caption': 'quoted text'                # None if no caption from Facebook
                         'links': [ 'uri' ],
                         'photos': [ '/path/to/file' ],
                         'createdTime': <datetime object>,
@@ -149,9 +150,10 @@ class FbFeedsHandler(FbBase):
 
         retData = []
         for feed in self._feeds['data']:
-            if not self._feedFilter(feed):
+            parser = self._feedParserFactory(feed)
+            if not parser:
                 continue
-            parsedData = self._feedParser(feed)
+            parsedData = parser(feed)
             if parsedData:
                 #self._dumpData(parsedData)
                 retData.append(parsedData)
@@ -172,34 +174,13 @@ class FbFeedsHandler(FbBase):
             return None
         return newFileName
 
-    def _feedFilter(self, feed):
-        # Strip contents which not posted by me
-        if feed['from']['id'] != self._myFbId:
-            return False
-
-        # Type filter
-        if 'type' not in feed:
-            raise ValueError()
-        fType = feed['type']
-        if fType == 'status':
-            # For status + story case, it might be event commenting to friend or adding friend
-            # So we filter message field
-            if 'message' in feed:
-                return True
-        elif fType == 'link':
-            if 'message' in feed:
-                return True
-        elif fType == 'photo':
-            # photo + link: Please note that repost of others' link will also be in 
-            return True
-        return False
-
     def _dumpData(self, data):
-        self._logger.debug((u"\nid[%s]\ncreatedTime[%s]\nupdatedTime[%s]\nmessage[%s]\nlinks[%s]\nphotos[%s]\n" % (
+        self._logger.debug((u"\nid[%s]\ncreatedTime[%s]\nupdatedTime[%s]\nmessage[%s]\ncaption[%s]\nlinks[%s]\nphotos[%s]\n" % (
                 data['id'],
                 data['createdTime'].isoformat(),
                 data['updatedTime'].isoformat(),
                 data['message'],
+                data['caption'],
                 data['links'],
                 data['photos'],
         )).encode('utf-8'))
@@ -217,24 +198,83 @@ class FbFeedsHandler(FbBase):
         rePattern = re.compile('(_\w)(\.\w+?$)')
         if re.search(rePattern, uri):
             origPic = re.sub(rePattern, '_o\\2', uri)
+            #self._logger.debug('picUri[%s]' % origPic)
             fPath = self._storeFileToTemp(origPic)
             if fPath:
                 return fPath
         # If we cannot retrieve original picture, turn to use the link Facebook provided instead.
+        #self._logger.debug('picUri[%s]' % uri)
         fPath = self._storeFileToTemp(uri)
         return fPath
 
-    def _feedParser(self, feed):
+    def _feedParserFactory(self, feed):
+        # Strip contents which not posted by me
+        if feed['from']['id'] != self._myFbId:
+            return None
+
+        # Type filter
+        if 'type' not in feed:
+            raise ValueError()
+        fType = feed['type']
+        if fType == 'status':
+            return self._feedParserStatus
+        elif fType == 'link':
+            return self._feedParserLink
+        elif fType == 'photo':
+            return self._feedParserPhoto
+        return None
+
+
+    def _feedParserStatus(self, feed):
+        ret = None
+        # For status + story case, it might be event commenting to friend or adding friend
+        # So we filter message field
+        if 'message' in feed:
+            ret = {}
+            ret['id'] = feed['id']
+            ret['message'] = feed['message']
+            ret['caption'] = feed.get('caption', None)
+            ret['createdTime'] = self._convertTimeFormat(feed['created_time'])
+            ret['updatedTime'] = self._convertTimeFormat(feed['updated_time'])
+            ret['links'] = []
+            if 'link' in feed:
+                ret['links'].append(feed['link'])
+            ret['photos'] = []
+            if 'picture' in feed:
+                imgPath = self._imgLinkHandler(feed['picture'])
+                if imgPath:
+                    ret['photos'].append(imgPath)
+        return ret
+
+    def _feedParserPhoto(self, feed):
+        ret = {}
+        ret['id'] = feed['id']
+        ret['message'] = feed.get('message', None)
+        # photo type's caption is usually the number of photos, so we will not export caption for photo type
+        ret['caption'] = None
+        ret['createdTime'] = self._convertTimeFormat(feed['created_time'])
+        ret['updatedTime'] = self._convertTimeFormat(feed['updated_time'])
+        ret['links'] = []
+        # photo type's link usually could not access outside, so we will not export link for photo type
+        ret['photos'] = []
+        if 'picture' in feed:
+            imgPath = self._imgLinkHandler(feed['picture'])
+            if imgPath:
+                ret['photos'].append(imgPath)
+        return ret
+
+    def _feedParserLink(self, feed):
         ret = None
         if 'message' in feed:
             ret = {}
             ret['id'] = feed['id']
             ret['message'] = feed['message']
+            # Link's caption usually is the link, so we will not export caption here.
+            ret['caption'] = None
             ret['createdTime'] = self._convertTimeFormat(feed['created_time'])
             ret['updatedTime'] = self._convertTimeFormat(feed['updated_time'])
             ret['links'] = []
-            if 'link' in feed and feed['type'] != 'photo':
-                # photo type's link usually could not access outside, so we will not export link for photo type
+            if 'link' in feed:
                 ret['links'].append(feed['link'])
             ret['photos'] = []
             if 'picture' in feed:
