@@ -250,8 +250,10 @@ class FbFeedsHandler(FbBase):
         ret = {}
         ret['id'] = feed['id']
         ret['message'] = feed.get('message', None)
-        # photo type's caption is usually the number of photos, so we will not export caption for photo type
-        ret['caption'] = None
+        ret['caption'] = feed.get('caption', None)
+        # FIXME: Currently we use dirty hack to skip album post
+        if ret['caption'] and re.search('^\d+ new photos$', ret['caption']):
+            ret['caption'] = None
         ret['createdTime'] = self._convertTimeFormat(feed['created_time'])
         ret['updatedTime'] = self._convertTimeFormat(feed['updated_time'])
         ret['links'] = []
