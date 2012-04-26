@@ -233,7 +233,8 @@ class FbFeedsHandler(FbBase):
             ret['createdTime'] = self._convertTimeFormat(feed['created_time'])
             ret['updatedTime'] = self._convertTimeFormat(feed['updated_time'])
             ret['links'] = []
-            if 'link' in feed:
+            if 'link' in feed and feed['type'] != 'photo':
+                # photo type's link usually could not access outside, so we will not export link for photo type
                 ret['links'].append(feed['link'])
             ret['photos'] = []
             if 'picture' in feed:
