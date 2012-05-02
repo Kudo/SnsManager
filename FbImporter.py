@@ -216,6 +216,8 @@ class FbFeedsHandler(FbBase):
         )).encode('utf-8'))
 
     def _imgLinkHandler(self, uri):
+        if not uri:
+            return None
         fPath = None
         # Strip safe_image.php
         urlsplitObj = urlparse.urlsplit(uri)
@@ -236,6 +238,25 @@ class FbFeedsHandler(FbBase):
         #self._logger.debug('picUri[%s]' % uri)
         fPath = self._storeFileToTemp(uri)
         return fPath
+
+
+    def _getFbMaxSizePhotoUri(self, feed):
+        if 'object_id' not in feed:
+            return None
+        params = {
+            'access_token' : self._accessToken,
+        }
+        uri = '{0}{1}?{2}'.format(self._graphUri, feed['object_id'], urllib.urlencode(params))
+        try:
+            conn = urllib2.urlopen(uri, timeout=self._timeout)
+            resp = json.loads(conn.read())
+        except:
+            self._logger.exception('Unable to get object from Facebook. uri[%s]' % (uri))
+            return None
+        # FIXME: Current we assume maximum size photo will be first element in images
+        if type(resp) == dict and 'images' in resp and len(resp['images']) > 0 and 'source' in resp['images'][0]:
+            return resp['images'][0]['source']
+        return None
 
     def _feedParserFactory(self, feed):
         # Strip contents which not posted by me
@@ -289,10 +310,12 @@ class FbFeedsHandler(FbBase):
         ret['links'] = []
         # photo type's link usually could not access outside, so we will not export link for photo type
         ret['photos'] = []
-        if 'picture' in feed:
-            imgPath = self._imgLinkHandler(feed['picture'])
-            if imgPath:
-                ret['photos'].append(imgPath)
+        imgUri = self._getFbMaxSizePhotoUri(feed)
+        if not imgUri and 'picture' in feed:
+            imgUri = feed['picture']
+        imgPath = self._imgLinkHandler(imgUri)
+        if imgPath:
+            ret['photos'].append(imgPath)
         return ret
 
     def _feedParserLink(self, feed):
