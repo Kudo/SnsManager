@@ -12,17 +12,26 @@ import unittest
 TEST_TOKEN = 'AccessToken'
 
 class TestFbUserInfo(unittest.TestCase):
-    def test_GetMyName_EqualMyName(self):
+    def test_GetMyName_EqualMyName_True(self):
         obj = FbUserInfo(accessToken=TEST_TOKEN)
-        self.assertEqual(obj.getMyName(), 'John Doe')
+        self.assertEqual(obj.getMyName(), 'Kudo Chien')
 
-    def test_GetMyEmail_EqualMyEmail(self):
+    def test_GetMyEmail_EqualMyEmail_True(self):
         obj = FbUserInfo(accessToken=TEST_TOKEN)
-        self.assertEqual(obj.getMyEmail(), 'john.doe@gmail.com')
+        self.assertEqual(obj.getMyEmail(), 'ckchien@gmail.com')
 
-    def test_GetMyAvatar_HasAvatarUri(self):
+    def test_GetMyAvatar_HasAvatarUri_True(self):
         obj = FbUserInfo(accessToken=TEST_TOKEN)
         self.assertTrue(obj.getMyAvatar())
+
+    def test_IsTokenValid_GivenValidToken_True(self):
+        obj = FbUserInfo(accessToken=TEST_TOKEN)
+        self.assertTrue(obj.isTokenValid())
+
+    def test_IsTokenValid_GivenInValidToken_False(self):
+        obj = FbUserInfo(accessToken='invalid_token')
+        self.assertFalse(obj.isTokenValid())
+
 
 if __name__ == '__main__':
     suite = unittest.TestLoader().loadTestsFromTestCase(TestFbUserInfo)

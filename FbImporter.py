@@ -136,6 +136,36 @@ class FbImporter(FbBase):
             return FbErrorCode.E_NO_DATA, {}
         return FbErrorCode.S_OK, retDict
 
+    def isTokenValid(self):
+        """
+        Check the access token validness as well as the permissions
+        """
+        uri = urllib.basejoin(self._graphUri, '/me/permissions')
+        uri += '?{0}'.format(urllib.urlencode({
+            'access_token': self._accessToken,
+        }))
+        requiredPerms = [
+            'read_stream',
+            'user_photos',
+            'user_status',
+        ]
+        try:
+            conn = urllib2.urlopen(uri, timeout=self._timeout)
+            respCode = conn.getcode()
+            resp = json.loads(conn.read())
+        except urllib2.URLError as e:
+            self._logger.error('Unable to get data from Facebook. uri[{0}] e[{1}]'.format(uri, e))
+            return False
+        except ValueError as e:
+            self._logger.error('Unable to parse returned data. resp[{0}] e[{1}]'.format(resp, e))
+            return False
+        if respCode != 200 or len(resp['data']) == 0:
+            return False
+        for perm in requiredPerms:
+            if perm not in resp['data'][0]:
+                return False
+        return True
+
 
 class FbFeedsHandler(FbBase):
     def __init__(self, *args, **kwargs):

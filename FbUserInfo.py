@@ -19,10 +19,10 @@ class FbUserInfo(FbBase):
             conn = urllib2.urlopen(uri, timeout=self._timeout)
             resp = json.loads(conn.read())
         except urllib2.URLError as e:
-            self._logger.error('Unable to get data from Facebook. uri[{0}] e[{0}]'.format(uri, e))
+            self._logger.error('Unable to get data from Facebook. uri[{0}] e[{1}]'.format(uri, e))
             return None, None, None
         except ValueError as e:
-            self._logger.error('Unable to parse returned data. e[{0}]'.format(e))
+            self._logger.error('Unable to parse returned data. resp[{0}] e[{1}]'.format(resp, e))
             return None, None, None
         if not resp or 'name' not in resp or 'email' not in resp or 'id' not in resp:
             self._logger.error('Unable to get name or email attribute from returned data. resp[{0}]'.format(json.dumps(resp)))
@@ -60,3 +60,18 @@ class FbUserInfo(FbBase):
             self._logger.error('Unable to get data from Facebook. e[{0}]'.format(e))
             return None
         return imgUri
+
+    def isTokenValid(self):
+        uri = urllib.basejoin(self._graphUri, '/me')
+        uri += '?{0}'.format(urllib.urlencode({
+            'access_token': self._accessToken,
+        }))
+        try:
+            conn = urllib2.urlopen(uri, timeout=self._timeout)
+            respCode = conn.getcode()
+        except urllib2.URLError as e:
+            self._logger.error('Unable to get data from Facebook. uri[{0}] e[{0}]'.format(uri, e))
+            return False
+        if respCode == 200:
+            return True
+        return False

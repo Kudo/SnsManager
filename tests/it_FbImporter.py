@@ -13,9 +13,8 @@ import logging
 
 TEST_TOKEN = 'AccessToken'
 
-
 class TestFbImporter(unittest.TestCase):
-    def test_GetData_ReturnValidFormat(self):
+    def test_GetData_ReturnValidFormat_True(self):
         obj = FbImporter(accessToken=TEST_TOKEN)
         resp = obj.getData()
         self.assertIn('retCode', resp)
@@ -25,6 +24,14 @@ class TestFbImporter(unittest.TestCase):
         self.assertTrue(type(resp['data']), list)
         self.assertIn('count', resp)
         self.assertTrue(type(resp['count']), int)
+
+    def test_IsTokenValid_GivenValidToken_True(self):
+        obj = FbImporter(accessToken=TEST_TOKEN)
+        self.assertTrue(obj.isTokenValid())
+
+    def test_IsTokenValid_GivenInValidToken_False(self):
+        obj = FbImporter(accessToken='invalid_token')
+        self.assertFalse(obj.isTokenValid())
 
 if __name__ == '__main__':
     suite = unittest.TestLoader().loadTestsFromTestCase(TestFbImporter)
