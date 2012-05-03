@@ -171,8 +171,8 @@ class FbFeedsHandler(FbBase):
     def __init__(self, *args, **kwargs):
         FbBase.__init__(self, *args, **kwargs)
         self._tmpFolder = kwargs.get('tmpFolder', '/tmp')
-        self._feeds = kwargs['feeds']
-        self._myFbId = kwargs['myFbId']
+        self._feeds = kwargs.get('feeds', None)
+        self._myFbId = kwargs.get('myFbId', None)
 
     def parse(self):
         if 'data' not in self._feeds:
@@ -230,12 +230,10 @@ class FbFeedsHandler(FbBase):
         rePattern = re.compile('(_\w)(\.\w+?$)')
         if re.search(rePattern, uri):
             origPic = re.sub(rePattern, '_o\\2', uri)
-            #self._logger.debug('picUri[%s]' % origPic)
             fPath = self._storeFileToTemp(origPic)
             if fPath:
                 return fPath
         # If we cannot retrieve original picture, turn to use the link Facebook provided instead.
-        #self._logger.debug('picUri[%s]' % uri)
         fPath = self._storeFileToTemp(uri)
         return fPath
 
@@ -272,7 +270,11 @@ class FbFeedsHandler(FbBase):
         elif fType == 'link':
             return self._feedParserLink
         elif fType == 'photo':
-            return self._feedParserPhoto
+            # FIXME: Currently we use dirty hack to check album post
+            if 'caption' in feed and re.search('^\d+ new photos$', feed['caption']):
+                return self._feedParserAlbum
+            else:
+                return self._feedParserPhoto
         return None
 
 
@@ -297,18 +299,41 @@ class FbFeedsHandler(FbBase):
                     ret['photos'].append(imgPath)
         return ret
 
+    def _feedParserAlbum(self, feed):
+        ret = {}
+        ret['id'] = feed['id']
+        ret['message'] = feed.get('message', None)
+        # album type's caption is photo numbers, so we will not export caption for album
+        ret['caption'] = None
+        ret['createdTime'] = self._convertTimeFormat(feed['created_time'])
+        ret['updatedTime'] = self._convertTimeFormat(feed['updated_time'])
+        # album type's link usually could not access outside, so we will not export link for photo type
+        ret['links'] = []
+
+        # FIXME: Currently Facebook do not have formal way to retrieve album id from news feed, so we parse from link
+        albumId = re.search('^https?://www\.facebook\.com\/photo\.php\?.+&set=a\.(\d+?)\.', feed['link']).group(1)
+        feedHandler = FbAlbumFeedsHandler(tmpFolder=self._tmpFolder,
+            accessToken=self._accessToken,
+            logger=self._logger,
+            id=albumId,
+        )
+        retPhotos = feedHandler.getPhotos(maxLimit=4)
+        if FbErrorCode.IS_SUCCEEDED(retPhotos['retCode']):
+            ret['photos'] = retPhotos['data']
+        else:
+            ret['photos'] = []
+        return ret
+
+
     def _feedParserPhoto(self, feed):
         ret = {}
         ret['id'] = feed['id']
         ret['message'] = feed.get('message', None)
         ret['caption'] = feed.get('caption', None)
-        # FIXME: Currently we use dirty hack to skip album post
-        if ret['caption'] and re.search('^\d+ new photos$', ret['caption']):
-            ret['caption'] = None
         ret['createdTime'] = self._convertTimeFormat(feed['created_time'])
         ret['updatedTime'] = self._convertTimeFormat(feed['updated_time'])
-        ret['links'] = []
         # photo type's link usually could not access outside, so we will not export link for photo type
+        ret['links'] = []
         ret['photos'] = []
         imgUri = self._getFbMaxSizePhotoUri(feed)
         if not imgUri and 'picture' in feed:
@@ -337,3 +362,82 @@ class FbFeedsHandler(FbBase):
                 if imgPath:
                     ret['photos'].append(imgPath)
         return ret
+
+class FbAlbumFeedsHandler(FbFeedsHandler):
+    def __init__(self, *args, **kwargs):
+        FbFeedsHandler.__init__(self, *args, **kwargs)
+        self._limit = kwargs.get('limit', 25)
+        self._id = kwargs['id']
+
+    def getPhotos(self, maxLimit=0, limit=25):
+        retDict = {
+            'retCode': FbErrorCode.S_OK,
+            'data': [],
+            'count': 0,
+        }
+        offset = 0
+        if maxLimit > 0 and maxLimit < limit:
+            limit = maxLimit
+
+        errorCode, feedData = self._pageCrawler(offset, limit)
+        failoverCount = 0
+        failoverThreshold = 3
+        while errorCode != FbErrorCode.E_NO_DATA:
+            if FbErrorCode.IS_FAILED(errorCode):
+                failoverCount += 1
+                # If crawling failed (which is not no data), wait and try again
+                if failoverCount <= failoverThreshold:
+                    time.sleep(2)
+                    errorCode, feedData = self._pageCrawler(offset, limit)
+                    continue
+                else:
+                    # FIXME: For over threshold case, need to consider how to crawl following data
+                    # Currently return error
+                    retDict['retCode'] = errorCode
+                    return retDict
+
+            parsedData = self._parse(feedData)
+            retDict['data'] += parsedData
+            retDict['count'] += len(parsedData)
+
+            if maxLimit > 0:
+                if retDict['count'] + limit > maxLimit:
+                    limit = maxLimit - retDict['count']
+
+                if retDict['count'] >= maxLimit:
+                    break
+
+            offset = urlparse.parse_qs(urlparse.urlsplit(feedData['paging']['next']).query)['offset'][0]
+            errorCode, feedData = self._pageCrawler(offset, limit)
+        return retDict
+
+    def _pageCrawler(self, offset, limit):
+        params = {
+            'access_token' : self._accessToken,
+            'offset' : offset,
+            'limit': limit,
+        }
+
+        uri = '{0}{1}/photos?{2}'.format(self._graphUri, self._id, urllib.urlencode(params))
+        self._logger.debug('photos URI to retrieve [%s]' % uri)
+        try:
+            conn = urllib2.urlopen(uri, timeout=self._timeout)
+        except:
+            self._logger.exception('Unable to get data from Facebook')
+            return FbErrorCode.E_FAILED, {}
+        retDict = json.loads(conn.read())
+        if 'data' not in retDict or 'paging' not in retDict or len(retDict['data']) == 0:
+            return FbErrorCode.E_NO_DATA, {}
+        return FbErrorCode.S_OK, retDict
+
+    def _parse(self, feedData):
+        retList = []
+        for feed in feedData['data']:
+            if 'images' in feed and len(feed['images']) > 0 and 'source' in feed['images'][0]:
+                imgUri = feed['images'][0]['source']
+                imgPath = self._imgLinkHandler(imgUri)
+                if imgPath:
+                    retList.append(imgPath)
+        return retList
+
+
