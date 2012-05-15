@@ -1,3 +1,5 @@
+import urllib3
+
 class FbBase(object):
     class MockLogger(object):
         def __init__(self, *args, **kwargs):
@@ -22,6 +24,7 @@ class FbBase(object):
         self._logger = kwargs.get('logger', FbBase.MockLogger())
 
         self._graphUri = 'https://graph.facebook.com/'
+        self._httpConn = urllib3.PoolManager()
         self._timeout = 60
         self._timeout = kwargs.get('timeout', 60)
 

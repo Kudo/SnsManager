@@ -5,6 +5,7 @@ import json
 import uuid
 import dateutil
 import urllib, urllib2
+import urllib3, urllib3.exceptions
 import urlparse
 from datetime import datetime, timedelta
 from dateutil import parser as dateParser
@@ -127,11 +128,11 @@ class FbImporter(FbBase):
         uri = '{0}me/feed?{1}'.format(self._graphUri, urllib.urlencode(params))
         self._logger.debug('URI to retrieve [%s]' % uri)
         try:
-            conn = urllib2.urlopen(uri, timeout=self._timeout)
+            conn = self._httpConn.urlopen('GET', uri, timeout=self._timeout)
         except: 
             self._logger.exception('Unable to get data from Facebook')
             return FbErrorCode.E_FAILED, {}
-        retDict = json.loads(conn.read())
+        retDict = json.loads(conn.data)
         if 'data' not in retDict or 'paging' not in retDict:
             return FbErrorCode.E_NO_DATA, {}
         return FbErrorCode.S_OK, retDict
@@ -150,10 +151,10 @@ class FbImporter(FbBase):
             'user_status',
         ]
         try:
-            conn = urllib2.urlopen(uri, timeout=self._timeout)
+            conn = self._httpConn.urlopen('GET', uri, timeout=self._timeout)
             respCode = conn.getcode()
-            resp = json.loads(conn.read())
-        except urllib2.URLError as e:
+            resp = json.loads(conn.data)
+        except urllib3.exceptions.HTTPError as e:
             self._logger.error('Unable to get data from Facebook. uri[{0}] e[{1}]'.format(uri, e))
             return False
         except ValueError as e:
@@ -246,8 +247,8 @@ class FbFeedsHandler(FbBase):
         }
         uri = '{0}{1}?{2}'.format(self._graphUri, feed['object_id'], urllib.urlencode(params))
         try:
-            conn = urllib2.urlopen(uri, timeout=self._timeout)
-            resp = json.loads(conn.read())
+            conn = self._httpConn.urlopen('GET', uri, timeout=self._timeout)
+            resp = json.loads(conn.data)
         except:
             self._logger.exception('Unable to get object from Facebook. uri[%s]' % (uri))
             return None
@@ -345,10 +346,12 @@ class FbFeedsHandler(FbBase):
 
     def _feedParserLink(self, feed):
         ret = None
-        if 'message' in feed:
+        # For link + story case, it might be event to add friends or join fans page
+        # So we filter story field
+        if not 'story' in feed:
             ret = {}
             ret['id'] = feed['id']
-            ret['message'] = feed['message']
+            ret['message'] = feed.get('message', None)
             # Link's caption usually is the link, so we will not export caption here.
             ret['caption'] = None
             ret['createdTime'] = self._convertTimeFormat(feed['created_time'])
@@ -421,11 +424,11 @@ class FbAlbumFeedsHandler(FbFeedsHandler):
         uri = '{0}{1}/photos?{2}'.format(self._graphUri, self._id, urllib.urlencode(params))
         self._logger.debug('photos URI to retrieve [%s]' % uri)
         try:
-            conn = urllib2.urlopen(uri, timeout=self._timeout)
+            conn = self._httpConn.urlopen('GET', uri, timeout=self._timeout)
         except:
             self._logger.exception('Unable to get data from Facebook')
             return FbErrorCode.E_FAILED, {}
-        retDict = json.loads(conn.read())
+        retDict = json.loads(conn.data)
         if 'data' not in retDict or 'paging' not in retDict or len(retDict['data']) == 0:
             return FbErrorCode.E_NO_DATA, {}
         return FbErrorCode.S_OK, retDict
