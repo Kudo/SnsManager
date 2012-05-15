@@ -152,7 +152,7 @@ class FbImporter(FbBase):
         ]
         try:
             conn = self._httpConn.urlopen('GET', uri, timeout=self._timeout)
-            respCode = conn.getcode()
+            respCode = conn.status
             resp = json.loads(conn.data)
         except urllib3.exceptions.HTTPError as e:
             self._logger.error('Unable to get data from Facebook. uri[{0}] e[{1}]'.format(uri, e))

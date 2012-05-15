@@ -1,4 +1,4 @@
-import urllib
+import urllib, urllib2
 import urllib3, urllib3.exceptions
 import json
 from FbBase import FbBase
@@ -55,7 +55,7 @@ class FbUserInfo(FbBase):
             'type': type,
         }))
         try:
-            conn = self._httpConn.urlopen('GET', uri, timeout=self._timeout)
+            conn = urllib2.urlopen(uri, timeout=self._timeout)
             imgUri = conn.geturl() # Facebook will trigger redirect and we need the uri not the data
         except urllib3.exceptions.HTTPError as e:
             self._logger.error('Unable to get data from Facebook. e[{0}]'.format(e))
@@ -69,7 +69,7 @@ class FbUserInfo(FbBase):
         }))
         try:
             conn = self._httpConn.urlopen('GET', uri, timeout=self._timeout)
-            respCode = conn.getcode()
+            respCode = conn.status
         except urllib3.exceptions.HTTPError as e:
             self._logger.error('Unable to get data from Facebook. uri[{0}] e[{0}]'.format(uri, e))
             return False
