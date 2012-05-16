@@ -25,6 +25,12 @@ class TestFbImporter(unittest.TestCase):
         self.assertIn('count', resp)
         self.assertTrue(type(resp['count']), int)
 
+    def test_GetData_GivenInvalidToken_ReturnInvalidToken(self):
+        obj = FbImporter(accessToken=TEST_TOKEN)
+        resp = obj.getData()
+        self.assertIn('retCode', resp)
+        self.assertEqual(resp['retCode'], FbErrorCode.E_INVALID_TOKEN)
+
     def test_IsTokenValid_GivenValidToken_True(self):
         obj = FbImporter(accessToken=TEST_TOKEN)
         self.assertTrue(obj.isTokenValid())

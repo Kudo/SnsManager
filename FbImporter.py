@@ -70,6 +70,10 @@ class FbImporter(FbBase):
         if not until:
             until = datetime.now() - timedelta(1)
 
+        if not self.isTokenValid():
+            retDict['retCode'] = FbErrorCode.E_INVALID_TOKEN
+            return retDict
+
         fbId = FbUserInfo(accessToken=self._accessToken, logger=self._logger).getMyId()
         if not fbId:
             return retDict
