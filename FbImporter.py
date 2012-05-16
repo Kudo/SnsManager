@@ -162,7 +162,7 @@ class FbImporter(FbBase):
             self._logger.error('Unable to get data from Facebook. uri[{0}] e[{1}]'.format(uri, e))
             return False
         except ValueError as e:
-            self._logger.error('Unable to parse returned data. resp[{0}] e[{1}]'.format(resp, e))
+            self._logger.error('Unable to parse returned data. data[{0}] e[{1}]'.format(conn.data, e))
             return False
         if respCode != 200 or len(resp['data']) == 0:
             return False
