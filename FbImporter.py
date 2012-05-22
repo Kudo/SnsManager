@@ -411,15 +411,15 @@ class FbAlbumFeedsHandler(FbFeedsHandler):
                 if photoDatetime > basetime + timerange:
                     continue
                 if photoDatetime < basetime - timerange:
-                    retDict['data'] += parseData
-                    retDict['count'] += len(parseData)
+                    retDict['data'] += parsedData
+                    retDict['count'] += len(parsedData)
                     return retDict
 
                 if 'images' in feed and len(feed['images']) > 0 and 'source' in feed['images'][0]:
                     imgUri = feed['images'][0]['source']
                     imgPath = self._imgLinkHandler(imgUri)
                     if imgPath:
-                        parseData.append(imgPath)
+                        parsedData.append(imgPath)
 
             retDict['data'] += parsedData
             retDict['count'] += len(parsedData)
