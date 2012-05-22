@@ -278,6 +278,8 @@ class FbFeedsHandler(FbBase):
             # FIXME: Currently we use dirty hack to check album post
             if 'caption' in feed and re.search('^\d+ new photos$', feed['caption']):
                 return self._feedParserAlbum
+            elif 'story' in feed and re.search('^.+\d+ new photos\.$', feed['story']):
+                return self._feedParserAlbum
             else:
                 return self._feedParserPhoto
         return None
