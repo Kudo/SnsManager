@@ -324,7 +324,7 @@ class FbFeedsHandler(FbBase):
             logger=self._logger,
             id=albumId,
         )
-        retPhotos = feedHandler.getPhotos(maxLimit=4)
+        retPhotos = feedHandler.getPhotos(maxLimit=4, basetime=ret['createdTime'], timerange=timedelta(minutes=20))
         if FbErrorCode.IS_SUCCEEDED(retPhotos['retCode']):
             ret['photos'] = retPhotos['data']
         else:
@@ -378,7 +378,7 @@ class FbAlbumFeedsHandler(FbFeedsHandler):
         self._limit = kwargs.get('limit', 25)
         self._id = kwargs['id']
 
-    def getPhotos(self, maxLimit=0, limit=25):
+    def getPhotos(self, maxLimit=0, limit=25, basetime=datetime.now(), timerange=timedelta(minutes=15)):
         retDict = {
             'retCode': FbErrorCode.S_OK,
             'data': [],
@@ -405,7 +405,22 @@ class FbAlbumFeedsHandler(FbFeedsHandler):
                     retDict['retCode'] = errorCode
                     return retDict
 
-            parsedData = self._parse(feedData)
+            parsedData = []
+            for feed in feedData['data']:
+                photoDatetime = self._convertTimeFormat(feed['created_time'])
+                if photoDatetime > basetime + timerange:
+                    continue
+                if photoDatetime < basetime - timerange:
+                    retDict['data'] += parseData
+                    retDict['count'] += len(parseData)
+                    return retDict
+
+                if 'images' in feed and len(feed['images']) > 0 and 'source' in feed['images'][0]:
+                    imgUri = feed['images'][0]['source']
+                    imgPath = self._imgLinkHandler(imgUri)
+                    if imgPath:
+                        parseData.append(imgPath)
+
             retDict['data'] += parsedData
             retDict['count'] += len(parsedData)
 
