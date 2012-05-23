@@ -372,7 +372,12 @@ class FbFeedsHandler(FbBase):
             ret['updatedTime'] = self._convertTimeFormat(feed['updated_time'])
             ret['links'] = []
             if 'link' in feed:
-                ret['links'].append(feed['link'])
+                private = False
+                if 'privacy' in feed and feed['privacy']['description'] != 'Public':
+                    private = True
+                # skip none-public facebook link, which we cannot get web preview
+                if not private or not re.search('^https?://www\.facebook\.com/.*$', feed['link']):
+                    ret['links'].append(feed['link'])
             ret['photos'] = []
             if 'picture' in feed:
                 imgPath = self._imgLinkHandler(feed['picture'])
