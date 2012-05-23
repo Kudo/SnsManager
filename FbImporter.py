@@ -282,6 +282,9 @@ class FbFeedsHandler(FbBase):
                 return self._feedParserAlbum
             else:
                 return self._feedParserPhoto
+        elif fType == 'video':
+            # treat video post as link post
+            return self._feedParserLink
         return None
 
 
@@ -318,7 +321,12 @@ class FbFeedsHandler(FbBase):
         ret['links'] = []
 
         # FIXME: Currently Facebook do not have formal way to retrieve album id from news feed, so we parse from link
-        albumId = re.search('^https?://www\.facebook\.com\/photo\.php\?.+&set=a\.(\d+?)\.', feed['link']).group(1)
+        searchResult = re.search('^https?://www\.facebook\.com\/photo\.php\?.+&set=a\.(\d+?)\.', feed['link'])
+        if searchResult is None:
+            self._logger.error('unable to find album set id from link: {0}'.format(feed['link']))
+            ret['photos'] = []
+            return ret
+        albumId = searchResult.group(1)
         feedHandler = FbAlbumFeedsHandler(tmpFolder=self._tmpFolder,
             accessToken=self._accessToken,
             logger=self._logger,
