@@ -343,6 +343,18 @@ class FbFeedsHandler(FbBase):
         # but for checkins we sync its caption 
         if feed['type'] == 'checkin':
             ret['caption'] = feed['caption']
+            # get checkin's place
+            if 'place' in feed:
+                lat = None
+                lnt = None
+                if 'location' in feed['place']:
+                    lat = feed['place']['location']['latitude']
+                    lnt = feed['place']['location']['longitude']
+                ret['place'] = {
+                    'name': feed['place']['name'],
+                    'latitude': lat,
+                    'longitude': lnt
+                }
         else:
             ret['caption'] = None
         if 'application' in feed:
