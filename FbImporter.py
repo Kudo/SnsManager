@@ -340,7 +340,11 @@ class FbFeedsHandler(FbBase):
         ret['id'] = feed['id']
         ret['message'] = feed.get('message', None)
         # album type's caption is photo numbers, so we will not export caption for album
-        ret['caption'] = None
+        # but for checkins we sync its caption 
+        if feed['type'] == 'checkin':
+            ret['caption'] = feed['caption']
+        else:
+            ret['caption'] = None
         if 'application' in feed:
             ret['application'] = feed['application']['name']
         ret['createdTime'] = self._convertTimeFormat(feed['created_time'])
