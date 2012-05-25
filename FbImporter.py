@@ -412,6 +412,8 @@ class FbFeedsHandler(FbBase):
             ret['message'] = feed.get('message', None)
             # Link's caption usually is the link, so we will not export caption here.
             ret['caption'] = None
+            if 'application' in feed:
+                ret['application'] = feed['application']['name']
             ret['createdTime'] = self._convertTimeFormat(feed['created_time'])
             ret['updatedTime'] = self._convertTimeFormat(feed['updated_time'])
             ret['links'] = []
