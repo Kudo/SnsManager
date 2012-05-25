@@ -367,7 +367,8 @@ class FbFeedsHandler(FbBase):
                 self._logger.error('unable to find album set id from link: {0}'.format(feed['link']))
                 ret['photos'] = []
                 return ret
-        albumId = searchResult.group(1)
+        else:
+            albumId = searchResult.group(1)
         feedHandler = FbAlbumFeedsHandler(tmpFolder=self._tmpFolder,
             accessToken=self._accessToken,
             logger=self._logger,
