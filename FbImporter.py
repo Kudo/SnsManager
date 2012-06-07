@@ -313,7 +313,7 @@ class FbApiHandlerBase(FbBase):
             if isFeedApi:
                 ret['createdTime'] = self._convertTimeFormat(data['created_time'])
             else:
-                ret['createdTime'] = None
+                ret['createdTime'] = self._convertTimeFormat(data['updated_time'])
             ret['updatedTime'] = self._convertTimeFormat(data['updated_time'])
             if 'application' in data:
                 ret['application'] = data['application']['name']
@@ -509,7 +509,7 @@ class FbApiHandlerBase(FbBase):
         if isFeedApi:
             ret['updatedTime'] = self._convertTimeFormat(data['updated_time'])
         else:
-            ret['updatedTime'] = None
+            ret['updatedTime'] = self._convertTimeFormat(data['created_time'])
 
         # checkin type's link usually could not access outside, so we will not export link for photo type
         ret['links'] = []
