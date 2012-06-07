@@ -313,13 +313,13 @@ class FbFeedsHandler(FbBase):
                     ret['photos'].append(imgPath)
         return ret
 
-    def _albumIdFromPhotoId(self, photoId):
+    def _albumIdFromObjectId(self, objectId):
         params = {
             'access_token' : self._accessToken
         }
 
-        uri = '{0}{1}/?{2}'.format(self._graphUri, photoId, urllib.urlencode(params))
-        self._logger.debug('photos URI to retrieve [%s]' % uri)
+        uri = '{0}{1}/?{2}'.format(self._graphUri, objectId, urllib.urlencode(params))
+        self._logger.debug('object URI to retrieve [%s]' % uri)
         try:
             conn = self._httpConn.urlopen('GET', uri, timeout=self._timeout)
         except:
@@ -331,6 +331,7 @@ class FbFeedsHandler(FbBase):
 
         searchResult = re.search('^https?://www\.facebook\.com\/photo\.php\?.+&set=a\.(\d+?)\.', retDict['link'])
         if searchResult is None:
+            self._logger.error('Unable to find album set id from link: {0}'.format(retDict['link']))
             return None
         return searchResult.group(1)
 
@@ -445,26 +446,19 @@ class FbFeedsHandler(FbBase):
         ret['links'] = []
 
         ret['photos'] = []
-        albumId = None
-        # FIXME: Currently Facebook do not have formal way to retrieve album id from news feed, so we parse from link
-        searchResult = re.search('^https?://www\.facebook\.com\/photo\.php\?fbid=(\d+)&set=s\.\d+.+', feed['link'])
-        if searchResult is not None:
-            # this seems a photo link, try to get its albumId
-            photoId = searchResult.group(1)
-            albumId = self._albumIdFromPhotoId(photoId)
+        if 'object_id' in feed:
+            albumId = self._albumIdFromObjectId(feed['object_id'])
 
-        if albumId:
-            self._logger.info("found an albumID from a photo link: {0}".format(albumId))
-            feedHandler = FbAlbumFeedsHandler(tmpFolder=self._tmpFolder,
-                accessToken=self._accessToken,
-                logger=self._logger,
-                id=albumId,
-            )
-            retPhotos = feedHandler.getPhotos(maxLimit=0, basetime=ret['createdTime'], timerange=timedelta(minutes=20))
-            if FbErrorCode.IS_SUCCEEDED(retPhotos['retCode']):
-                ret['photos'] = retPhotos['data']
-        else:
-            self._logger.error('unable to find album set id from link: {0}'.format(feed['link']))
+            if albumId:
+                self._logger.info("found an albumID from a checkin link: {0}".format(albumId))
+                feedHandler = FbAlbumFeedsHandler(tmpFolder=self._tmpFolder,
+                    accessToken=self._accessToken,
+                    logger=self._logger,
+                    id=albumId,
+                )
+                retPhotos = feedHandler.getPhotos(maxLimit=0, basetime=ret['createdTime'], timerange=timedelta(minutes=20))
+                if FbErrorCode.IS_SUCCEEDED(retPhotos['retCode']):
+                    ret['photos'] = retPhotos['data']
 
         return ret
 
