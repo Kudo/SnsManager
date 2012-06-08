@@ -25,6 +25,7 @@ class FbImporter(FbBase):
 
         self._tmpFolder = kwargs['tmpFolder'] if 'tmpFolder' in kwargs else '/tmp'
         self.fbId = ''
+        self._multiApiCrawlerSince = kwargs['multiApiCrawlerSince'] if 'multiApiCrawlerSince' in kwargs else dateParser.parse('2010-12-31')
 
     def getData(self, since=None, until=None):
         """
@@ -81,10 +82,17 @@ class FbImporter(FbBase):
 
         # Please make sure feed placed in first api call, since we are now havve more confident for feed API data
         for api in ['feed', 'statuses', 'checkins', 'videos', 'links']:
-            _since = since
+            if api != 'feed' and self._multiApiCrawlerSince and (not since or since > self._multiApiCrawlerSince):
+                _since = self._multiApiCrawlerSince
+            else:
+                _since = since
             _until = until
-            _after = None
-            errorCode, data = self._apiCrawler(api, _since, _until)
+            if api == 'links':
+                # links API did not well support since/until, so we currently crawlling all
+                _after = True
+            else:
+                _after = None
+            errorCode, data = self._apiCrawler(api, _since, _until, after=_after)
             failoverCount = 0
             failoverThreshold = 3
             while errorCode != FbErrorCode.E_NO_DATA:
@@ -172,7 +180,10 @@ class FbImporter(FbBase):
         }
 
         if after:
-            params['after'] = after
+            if type(after) == bool:
+                params['after'] = ''
+            else:
+                params['after'] = after
         else:
             # Handle since/until parameters, please note that our definitions of since/until are totally different than Facebook
             if since:
@@ -244,11 +255,14 @@ class FbApiHandlerBase(FbBase):
 
             parsedData = self.parseInner(data)
             if parsedData:
-                if not filterDateInfo or parsedData['createdTime'].replace(tzinfo=None) >= filterDateInfo['until'].replace(tzinfo=None):
+                if not filterDateInfo:
                     #self._dumpData(parsedData)
                     retData.append(parsedData)
                 else:
-                    return retData, True
+                    createdTime = parsedData['createdTime'].replace(tzinfo=None)
+                    if createdTime >= filterDateInfo['until'].replace(tzinfo=None) and createdTime <= filterDateInfo['since'].replace(tzinfo=None):
+                        #self._dumpData(parsedData)
+                        retData.append(parsedData)
 
         return retData, False
 
