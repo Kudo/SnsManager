@@ -84,10 +84,13 @@ class FbImporter(FbBase):
         for api in ['feed', 'statuses', 'checkins', 'videos', 'links']:
             if api != 'feed' and self._multiApiCrawlerSince and (not since or since > self._multiApiCrawlerSince):
                 _since = self._multiApiCrawlerSince
+                if _since < until:
+                    self._logger.info('multiApiCrawlerSince < until, skip this API call. api[%s]' % (api))
+                    continue
             else:
                 _since = since
             _until = until
-            if api == 'links':
+            if api == 'links' and ((since and since <= self._multiApiCrawlerSince) or not since):
                 # links API did not well support since/until, so we currently crawlling all
                 _after = True
             else:
