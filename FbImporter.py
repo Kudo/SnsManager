@@ -80,9 +80,10 @@ class FbImporter(FbBase):
             return retDict
 
         # Please make sure feed placed in first api call, since we are now havve more confident for feed API data
-        for api in ['feed', 'statuses', 'checkins', 'videos']:
+        for api in ['feed', 'statuses', 'checkins', 'videos', 'links']:
             _since = since
             _until = until
+            _after = None
             errorCode, data = self._apiCrawler(api, _since, _until)
             failoverCount = 0
             failoverThreshold = 3
@@ -92,7 +93,7 @@ class FbImporter(FbBase):
                     # If crawling failed (which is not no data), wait and try again
                     if failoverCount <= failoverThreshold:
                         time.sleep(2)
-                        errorCode, data = self._apiCrawler(api, _since, _until)
+                        errorCode, data = self._apiCrawler(api, _since, _until, after=_after)
                         continue
                     else:
                         # FIXME: For over threshold case, need to consider how to crawl following data
@@ -106,17 +107,34 @@ class FbImporter(FbBase):
                     data=data,
                     logger=self._logger,
                     )
-                parsedData = apiHandler.parse()
-                self._mergeData(retDict['data'], parsedData)
 
-                newSince = urlparse.parse_qs(urlparse.urlsplit(data['paging']['next']).query)['until'][0]
-                newSince = datetime.fromtimestamp(int(newSince))
-                if _since and newSince >= _since:
+                if _after:
+                    parsedData, stopCrawling = apiHandler.parse({'since': _since, 'until': _until})
+                    self._mergeData(retDict['data'], parsedData)
+                    if stopCrawling:
+                        errorCode = FbErrorCode.E_NO_DATA
+                        continue
+                else:
+                    parsedData, stopCrawling = apiHandler.parse()
+                    self._mergeData(retDict['data'], parsedData)
+
+                try:
+                    newSince = urlparse.parse_qs(urlparse.urlsplit(data['paging']['next']).query)['until'][0]
+                    newSince = datetime.fromtimestamp(int(newSince))
+                except:
+                    self._logger.exception('Unable to have "until" in paging next, turn to use after and filter by createdTime')
+                    # Some Graph API call did not return until but with an 'after' instead
+                    # For this case, we follow after call and filter returned elements by createdTime
+                    _after = urlparse.parse_qs(urlparse.urlsplit(data['paging']['next']).query)['after'][0]
+
+                if _after:
+                    errorCode, data = self._apiCrawler(api, _since, _until, after=_after)
+                elif _since and newSince >= _since:
                     self._logger.info("No more data for next paging's until >= current until")
                     errorCode = FbErrorCode.E_NO_DATA
                 else:
                     _since = newSince
-                    errorCode, data = self._apiCrawler(api, _since, _until)
+                    errorCode, data = self._apiCrawler(api, _since, _until, after=_after)
 
         retDict['count'] = len(retDict['data'])
         retDict['retCode'] = FbErrorCode.S_OK
@@ -131,6 +149,8 @@ class FbImporter(FbBase):
             return FbApiHandlerCheckins
         elif api == 'videos':
             return FbApiHandlerVideos
+        elif api == 'links':
+            return FbApiHandlerLinks
         else:
             return None
 
@@ -146,18 +166,21 @@ class FbImporter(FbBase):
     def _datetime2Timestamp(self, datetimeObj):
         return int(time.mktime(datetimeObj.timetuple()))
 
-    def _apiCrawler(self, api, since, until):
+    def _apiCrawler(self, api, since, until, after=None):
         params = {
             'access_token' : self._accessToken,
         }
 
-        # Handle since/until parameters, please note that our definitions of since/until are totally different than Facebook
-        if since:
-            params['until'] = self._datetime2Timestamp(since)
-        if until:
-            params['since'] = self._datetime2Timestamp(until)
-        if since and until and since < until:
-            raise ValueError('since cannot older than until')
+        if after:
+            params['after'] = after
+        else:
+            # Handle since/until parameters, please note that our definitions of since/until are totally different than Facebook
+            if since:
+                params['until'] = self._datetime2Timestamp(since)
+            if until:
+                params['since'] = self._datetime2Timestamp(until)
+            if since and until and since < until:
+                raise ValueError('since cannot older than until')
 
         uri = '{0}me/{1}?{2}'.format(self._graphUri, api, urllib.urlencode(params))
         self._logger.debug('URI to retrieve [%s]' % uri)
@@ -170,8 +193,6 @@ class FbImporter(FbBase):
         if 'data' not in retDict or 'paging' not in retDict:
             return FbErrorCode.E_NO_DATA, {}
         return FbErrorCode.S_OK, retDict
-
-
 
 
     def isTokenValid(self):
@@ -211,7 +232,7 @@ class FbApiHandlerBase(FbBase):
         self._data = kwargs.get('data', None)
         self._myFbId = kwargs.get('myFbId', None)
 
-    def parse(self):
+    def parse(self, filterDateInfo=None):
         if 'data' not in self._data:
             raise ValueError()
 
@@ -223,9 +244,13 @@ class FbApiHandlerBase(FbBase):
 
             parsedData = self.parseInner(data)
             if parsedData:
-                self._dumpData(parsedData)
-                retData.append(parsedData)
-        return retData
+                if not filterDateInfo or parsedData['createdTime'].replace(tzinfo=None) >= filterDateInfo['until'].replace(tzinfo=None):
+                    #self._dumpData(parsedData)
+                    retData.append(parsedData)
+                else:
+                    return retData, True
+
+        return retData, False
 
     def parseInner(self, data):
         return None
@@ -412,35 +437,45 @@ class FbApiHandlerBase(FbBase):
         return ret
 
     def _dataParserLink(self, data, isFeedApi=True):
-        ret = None
         # For link + story case, it might be event to add friends or join fans page
         # So we filter story field
-        if not 'story' in data:
-            ret = {}
-            if isFeedApi:
-                ret['id'] = data['id']
-            else:
-                ret['id'] = '%s_%s' % (self._myFbId, data['id'])
-            ret['message'] = data.get('message', None)
-            # Link's caption usually is the link, so we will not export caption here.
-            ret['caption'] = None
-            if 'application' in data:
-                ret['application'] = data['application']['name']
-            ret['createdTime'] = self._convertTimeFormat(data['created_time'])
+        if 'story' in data and not re.search('shared a link.$', data['story']):
+            return None
+
+        ret = {}
+        if isFeedApi:
+            ret['id'] = data['id']
+        else:
+            ret['id'] = '%s_%s' % (self._myFbId, data['id'])
+        ret['message'] = data.get('message', None)
+        # Link's caption usually is the link, so we will not export caption here.
+        ret['caption'] = None
+        if 'application' in data:
+            ret['application'] = data['application']['name']
+        ret['createdTime'] = self._convertTimeFormat(data['created_time'])
+        if isFeedApi:
             ret['updatedTime'] = self._convertTimeFormat(data['updated_time'])
-            ret['links'] = []
-            if 'link' in data:
-                private = False
-                if 'privacy' in data and data['privacy']['description'] != 'Public':
+        else:
+            ret['updatedTime'] = self._convertTimeFormat(data['created_time'])
+        ret['links'] = []
+        if 'link' in data:
+            private = False
+            if 'privacy' in data:
+                if data['privacy']['description'] != 'Public':
                     private = True
-                # skip none-public facebook link, which we cannot get web preview
-                if not private or not re.search('^https?://www\.facebook\.com/.*$', data['link']):
-                    ret['links'].append(data['link'])
-            ret['photos'] = []
-            if 'picture' in data:
-                imgPath = self._imgLinkHandler(data['picture'])
-                if imgPath:
-                    ret['photos'].append(imgPath)
+            # skip none-public facebook link, which we cannot get web preview
+            if data['link'][0] == '/':
+                data['link'] = 'http://www.facebook.com%s' % (data['link'])
+            if not private or not re.search('^https?://www\.facebook\.com/.*$', data['link']):
+                ret['links'].append(data['link'])
+        ret['photos'] = []
+        if 'picture' in data:
+            imgPath = self._imgLinkHandler(data['picture'])
+            if imgPath:
+                ret['photos'].append(imgPath)
+        if len(ret['links']) == 0 and len(ret['photos']) == 0:
+            # If link type data without a link or picture, do not expose this record
+            return None
         return ret
 
     def _dataParserVideo(self, data, isFeedApi=True):
@@ -572,6 +607,10 @@ class FbApiHandlerCheckins(FbApiHandlerBase):
 class FbApiHandlerVideos(FbApiHandlerBase):
     def parseInner(self, data):
         return self._dataParserVideo(data, isFeedApi=False)
+
+class FbApiHandlerLinks(FbApiHandlerBase):
+    def parseInner(self, data):
+        return self._dataParserLink(data, isFeedApi=False)
 
 class FbAlbumFeedsHandler(FbApiHandlerBase):
     def __init__(self, *args, **kwargs):
