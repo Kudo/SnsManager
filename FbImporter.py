@@ -478,22 +478,29 @@ class FbApiHandlerBase(FbBase):
             ret['updatedTime'] = self._convertTimeFormat(data['created_time'])
         ret['links'] = []
         if 'link' in data:
-            private = False
-            if 'privacy' in data:
-                if data['privacy']['description'] != 'Public':
-                    private = True
-            # skip none-public facebook link, which we cannot get web preview
+            isFacebookLink = False
             if data['link'][0] == '/':
                 data['link'] = 'http://www.facebook.com%s' % (data['link'])
-            if not private or not re.search('^https?://www\.facebook\.com/.*$', data['link']):
+            if re.search('^https?://www\.facebook\.com/.*$', data['link']):
+                isFacebookLink = True
                 ret['links'].append(data['link'])
+            elif not re.search('^https?://apps\.facebook\.com/.*$', data['link']):
+                # Skip Facebook apps' link
+                ret['links'].append(data['link'])
+
+        # For Facebook link, try to expose more information as possible
+        if isFacebookLink and 'description' in data:
+            ret['caption'] = data['description']
+
         ret['photos'] = []
-        if 'picture' in data:
+        # If there are links, do not expose photos due to currently photos will overwrite links attributes
+        if len(ret['links']) == 0 and 'picture' in data:
             imgPath = self._imgLinkHandler(data['picture'])
             if imgPath:
                 ret['photos'].append(imgPath)
+
+        # If link type data without a link or picture, do not expose this record
         if len(ret['links']) == 0 and len(ret['photos']) == 0:
-            # If link type data without a link or picture, do not expose this record
             return None
         return ret
 
@@ -504,7 +511,6 @@ class FbApiHandlerBase(FbBase):
         else:
             ret['id'] = '%s_%s' % (self._myFbId, data['id'])
         ret['message'] = data.get('name', None) or data.get('subject', None)
-        # Link's caption usually is the link, so we will not export caption here.
         ret['caption'] = data.get('description', None) or data.get('message', None)
         if 'application' in data:
             ret['application'] = data['application']['name']
@@ -515,14 +521,9 @@ class FbApiHandlerBase(FbBase):
             ret['updatedTime'] = self._convertTimeFormat(data['created_time'])
         ret['links'] = []
         if 'link' in data:
-            private = False
-            if 'privacy' in data:
-                if data['privacy']['description'] != 'Public':
-                    private = True
-            # skip none-public facebook link, which we cannot get web preview
             if data['link'][0] == '/':
                 data['link'] = 'http://www.facebook.com%s' % (data['link'])
-            if not private or not re.search('^https?://www\.facebook\.com/.*$', data['link']):
+            if not re.search('^https?://www\.facebook\.com/.*$', data['link']):
                 ret['links'].append(data['link'])
         ret['photos'] = []
         if 'picture' in data:
@@ -551,11 +552,7 @@ class FbApiHandlerBase(FbBase):
             ret['links'] = []
             if isFeedApi:
                 if 'link' in data:
-                    private = False
-                    if 'privacy' in data and data['privacy']['description'] != 'Public':
-                        private = True
-                   # skip none-public facebook link, which we cannot get web preview
-                    if not private or not re.search('^https?://www\.facebook\.com/.*$', data['link']):
+                    if not re.search('^https?://www\.facebook\.com/.*$', data['link']):
                         ret['links'].append(data['link'])
             else:
                 ret['links'].append('https://www.facebook.com/photo.php?v=%s' % data['id'])
