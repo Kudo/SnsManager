@@ -81,7 +81,7 @@ class FbImporter(FbBase):
             return retDict
 
         # Please make sure feed placed in first api call, since we are now havve more confident for feed API data
-        for api in ['feed', 'statuses', 'checkins', 'videos', 'links']:
+        for api in ['feed', 'statuses', 'checkins', 'videos', 'links', 'notes']:
             if api != 'feed' and self._multiApiCrawlerSince and (not since or since > self._multiApiCrawlerSince):
                 _since = self._multiApiCrawlerSince
                 if _since < until:
@@ -90,8 +90,8 @@ class FbImporter(FbBase):
             else:
                 _since = since
             _until = until
-            if api == 'links' and ((since and since <= self._multiApiCrawlerSince) or not since):
-                # links API did not well support since/until, so we currently crawlling all
+            if (api == 'links' or api == 'notes') and ((since and since <= self._multiApiCrawlerSince) or not since):
+                # links/notes API did not well support since/until, so we currently crawlling all
                 _after = True
             else:
                 _after = None
@@ -162,6 +162,8 @@ class FbImporter(FbBase):
             return FbApiHandlerVideos
         elif api == 'links':
             return FbApiHandlerLinks
+        elif api == 'notes':
+            return FbApiHandlerNotes
         else:
             return None
 
@@ -495,6 +497,40 @@ class FbApiHandlerBase(FbBase):
             return None
         return ret
 
+    def _dataParserNote(self, data, isFeedApi=True):
+        ret = {}
+        if isFeedApi:
+            ret['id'] = data['id']
+        else:
+            ret['id'] = '%s_%s' % (self._myFbId, data['id'])
+        ret['message'] = data.get('name', None) or data.get('subject', None)
+        # Link's caption usually is the link, so we will not export caption here.
+        ret['caption'] = data.get('description', None) or data.get('message', None)
+        if 'application' in data:
+            ret['application'] = data['application']['name']
+        ret['createdTime'] = self._convertTimeFormat(data['created_time'])
+        if isFeedApi:
+            ret['updatedTime'] = self._convertTimeFormat(data['updated_time'])
+        else:
+            ret['updatedTime'] = self._convertTimeFormat(data['created_time'])
+        ret['links'] = []
+        if 'link' in data:
+            private = False
+            if 'privacy' in data:
+                if data['privacy']['description'] != 'Public':
+                    private = True
+            # skip none-public facebook link, which we cannot get web preview
+            if data['link'][0] == '/':
+                data['link'] = 'http://www.facebook.com%s' % (data['link'])
+            if not private or not re.search('^https?://www\.facebook\.com/.*$', data['link']):
+                ret['links'].append(data['link'])
+        ret['photos'] = []
+        if 'picture' in data:
+            imgPath = self._imgLinkHandler(data['picture'])
+            if imgPath:
+                ret['photos'].append(imgPath)
+        return ret
+
     def _dataParserVideo(self, data, isFeedApi=True):
         ret = None
         # For link + story case, it might be event to add friends or join fans page
@@ -598,7 +634,11 @@ class FbApiHandlerFeed(FbApiHandlerBase):
         if fType == 'status':
             return self._dataParserStatus
         elif fType == 'link':
-            return self._dataParserLink
+            # Note is a link type in FeedApi
+            if 'application' in data and data['application']['id'] == '2347471856':
+                return self._dataParserNote
+            else:
+                return self._dataParserLink
         elif fType == 'photo':
             # FIXME: Currently we use dirty hack to check album post
             if 'caption' in data and re.search('^\d+ new photos$', data['caption']):
@@ -628,6 +668,11 @@ class FbApiHandlerVideos(FbApiHandlerBase):
 class FbApiHandlerLinks(FbApiHandlerBase):
     def parseInner(self, data):
         return self._dataParserLink(data, isFeedApi=False)
+
+class FbApiHandlerNotes(FbApiHandlerBase):
+    def parseInner(self, data):
+        return self._dataParserNote(data, isFeedApi=False)
+
 
 class FbAlbumFeedsHandler(FbApiHandlerBase):
     def __init__(self, *args, **kwargs):
