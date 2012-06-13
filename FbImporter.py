@@ -7,6 +7,7 @@ import dateutil
 import urllib, urllib2
 import urllib3, urllib3.exceptions
 import urlparse
+import lxml.html
 from datetime import datetime, timedelta
 from dateutil import parser as dateParser
 from FbBase import FbBase, FbErrorCode
@@ -511,7 +512,11 @@ class FbApiHandlerBase(FbBase):
         else:
             ret['id'] = '%s_%s' % (self._myFbId, data['id'])
         ret['message'] = data.get('name', None) or data.get('subject', None)
-        ret['caption'] = data.get('description', None) or data.get('message', None)
+        content = data.get('description', None) or data.get('message', None)
+        if content:
+            content = re.sub('<br\s*?/?>', '\n', content)
+            content = lxml.html.fromstring(content).text_content()
+        ret['caption'] = content
         if 'application' in data:
             ret['application'] = data['application']['name']
         ret['createdTime'] = self._convertTimeFormat(data['created_time'])
