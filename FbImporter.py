@@ -521,7 +521,7 @@ class FbAlbumFeedsHandler(FbFeedsHandler):
                 if retDict['count'] >= maxLimit:
                     break
 
-            offset = urlparse.parse_qs(urlparse.urlsplit(feedData['paging']['next']).query)['offset'][0]
+            offset += len(feedData['data'])
             errorCode, feedData = self._pageCrawler(offset, limit)
         return retDict
 
