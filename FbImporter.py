@@ -557,8 +557,7 @@ class FbApiHandlerBase(FbBase):
             ret['links'] = []
             if isFeedApi:
                 if 'link' in data:
-                    if not re.search('^https?://www\.facebook\.com/.*$', data['link']):
-                        ret['links'].append(data['link'])
+                    ret['links'].append(data['link'])
             else:
                 ret['links'].append('https://www.facebook.com/photo.php?v=%s' % data['id'])
             ret['photos'] = []
@@ -642,10 +641,7 @@ class FbApiHandlerFeed(FbApiHandlerBase):
             else:
                 return self._dataParserLink
         elif fType == 'photo':
-            # FIXME: Currently we use dirty hack to check album post
-            if 'caption' in data and re.search('^\d+ new photos$', data['caption']):
-                return self._dataParserAlbum
-            elif 'story' in data and re.search('^.+\d+ new photos\.$', data['story']):
+            if self._isAlbum(data):
                 return self._dataParserAlbum
             else:
                 return self._dataParserPhoto
@@ -654,6 +650,31 @@ class FbApiHandlerFeed(FbApiHandlerBase):
         elif fType == 'checkin':
             return self._dataParserCheckin
         return None
+
+    def _isAlbum(self, data):
+        searchResult = re.search('^https?://www\.facebook\.com\/photo\.php\?.+&set=a\.(\d+?)\.', data['link'])
+        if not searchResult:
+            return False
+        albumId = searchResult.group(1)
+        params = {
+            'access_token' : self._accessToken,
+        }
+
+        uri = '{0}{1}/?{2}'.format(self._graphUri, albumId, urllib.urlencode(params))
+        self._logger.debug('Album URI to retrieve [%s]' % uri)
+        try:
+            conn = self._httpConn.urlopen('GET', uri, timeout=self._timeout)
+        except:
+            self._logger.exception('Unable to get data from Facebook')
+            return False
+        retDict = json.loads(conn.data)
+        # If album owner is me and it's uploadable, the album is what we should crawl
+        if type(retDict) == dict and 'from' in retDict and retDict['from']['id'] == self._myFbId:
+            if retDict['can_upload']:
+                # Check can_upload to filter 'Wall Photos', 'Mobile photos', or something internal albums
+                return True
+
+        return False
 
 class FbApiHandlerStatuses(FbApiHandlerBase):
     def parseInner(self, data):
@@ -735,7 +756,7 @@ class FbAlbumFeedsHandler(FbApiHandlerBase):
                 if retDict['count'] >= maxLimit:
                     break
 
-            offset = urlparse.parse_qs(urlparse.urlsplit(feedData['paging']['next']).query)['offset'][0]
+            offset += len(feedData['data'])
             errorCode, feedData = self._pageCrawler(offset, limit)
         return retDict
 
