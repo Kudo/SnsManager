@@ -236,9 +236,13 @@ class FbImporter(FbBase):
             self._logger.error('Unable to parse returned data. data[{0}] e[{1}]'.format(conn.data, e))
             return False
         if respCode != 200 or len(resp['data']) == 0:
+            moreInfoLink = 'https://developers.facebook.com/tools/debug/access_token?q=' + self._accessToken
+            self._logger.info('Invalid token. data[{0}] moreInfoLink[{1}]'.format(conn.data, moreInfoLink))
             return False
         for perm in requiredPerms:
             if perm not in resp['data'][0]:
+                moreInfoLink = 'https://developers.facebook.com/tools/debug/access_token?q=' + self._accessToken
+                self._logger.info('Token did not have enough permission. data[{0}] moreInfoLink[{1}]'.format(conn.data, moreInfoLink))
                 return False
         return True
 
