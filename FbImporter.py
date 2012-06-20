@@ -27,6 +27,7 @@ class FbImporter(FbBase):
         self._tmpFolder = kwargs['tmpFolder'] if 'tmpFolder' in kwargs else '/tmp'
         self.fbId = ''
         self._multiApiCrawlerSince = kwargs['multiApiCrawlerSince'] if 'multiApiCrawlerSince' in kwargs else dateParser.parse('2010-12-31')
+        self.verbose = kwargs['verbose'] if 'verbose' in kwargs else False
 
     def getData(self, since=None, until=None):
         """
@@ -118,6 +119,7 @@ class FbImporter(FbBase):
                     accessToken=self._accessToken,
                     data=data,
                     logger=self._logger,
+                    verbose=self.verbose,
                     )
 
                 if _after:
@@ -252,6 +254,7 @@ class FbApiHandlerBase(FbBase):
         self._tmpFolder = kwargs.get('tmpFolder', '/tmp')
         self._data = kwargs.get('data', None)
         self._myFbId = kwargs.get('myFbId', None)
+        self.verbose = kwargs.get('verbose', False)
 
     def parse(self, filterDateInfo=None):
         if 'data' not in self._data:
@@ -266,12 +269,12 @@ class FbApiHandlerBase(FbBase):
             parsedData = self.parseInner(data)
             if parsedData:
                 if not filterDateInfo:
-                    #self._dumpData(parsedData)
+                    self._dumpData(parsedData)
                     retData.append(parsedData)
                 else:
                     createdTime = parsedData['createdTime'].replace(tzinfo=None)
                     if createdTime >= filterDateInfo['until'].replace(tzinfo=None) and createdTime <= filterDateInfo['since'].replace(tzinfo=None):
-                        #self._dumpData(parsedData)
+                        self._dumpData(parsedData)
                         retData.append(parsedData)
 
         return retData, False
@@ -295,27 +298,29 @@ class FbApiHandlerBase(FbBase):
         return newFileName
 
     def _dumpData(self, data):
-        self._logger.debug((u"\nid[%s]\ncreatedTime[%s]\nupdatedTime[%s]\nmessage[%s]\ncaption[%s]\nlinks[%s]\nphotos[%s]\n" % (
-                data['id'],
-                data['createdTime'].isoformat() if isinstance(data['createdTime'], datetime) else data['createdTime'],
-                data['updatedTime'].isoformat() if isinstance(data['updatedTime'], datetime) else data['updatedTime'],
-                data['message'],
-                data['caption'],
-                data['links'],
-                data['photos'],
-        )).encode('utf-8'))
+        if self.verbose:
+            output = u"\n"
+            for k, v in data.iteritems():
+                val = v
+                if isinstance(val, datetime):
+                    val = val.isoformat()
+                output += u"%s[%s]\n" % (k, val)
+            self._logger.debug(output.encode('utf-8'))
 
-    def _imgLinkHandler(self, uri):
-        if not uri:
-            return None
-        fPath = None
+    def _stripSafeImage(self, uri):
         # Strip safe_image.php
         urlsplitObj = urlparse.urlsplit(uri)
         if urlsplitObj.path == '/safe_image.php':
             queryDict = urlparse.parse_qs(urlsplitObj.query)
             if 'url' in queryDict:
                 uri = queryDict['url'][0]
+        return uri
 
+    def _imgLinkHandler(self, uri):
+        if not uri:
+            return None
+        fPath = None
+        uri = self._stripSafeImage(uri)
         # Replace subfix to _o, e.g. *_s.jpg to *_o.jpg
         rePattern = re.compile('(_\w)(\.\w+?$)')
         if re.search(rePattern, uri):
@@ -437,6 +442,56 @@ class FbApiHandlerBase(FbBase):
 
         return ret
 
+    def _dataParserTagPhoto(self, data, isFeedApi=True):
+        ret = {}
+        if isFeedApi:
+            ret['id'] = data['id']
+        else:
+            ret['id'] = '%s_%s' % (self._myFbId, data['id'])
+        params = {
+            'access_token' : self._accessToken,
+        }
+
+        ret['message'] = data.get('message', None) or data.get('story', None)
+        if 'application' in data:
+            ret['application'] = data['application']['name']
+        ret['createdTime'] = self._convertTimeFormat(data['created_time'])
+        ret['updatedTime'] = self._convertTimeFormat(data['updated_time'])
+        # photo type's link usually could not access outside, so we will not export link for photo type
+        ret['links'] = []
+        ret['photos'] = []
+
+        uri = '{0}{1}/?{2}'.format(self._graphUri, data['object_id'], urllib.urlencode(params))
+        self._logger.debug('Tag photo URI to retrieve [%s]' % uri)
+        try:
+            conn = self._httpConn.urlopen('GET', uri, timeout=self._timeout)
+        except:
+            self._logger.exception('Unable to get data from Facebook')
+            # If unable to get tag object, turn to use feed's data
+            imgUri = self._getFbMaxSizePhotoUri(data)
+            if not imgUri and 'picture' in data:
+                imgUri = data['picture']
+            imgPath = self._imgLinkHandler(imgUri)
+            if imgPath:
+                ret['photos'].append(imgPath)
+            return ret
+
+        tagPhotoData = json.loads(conn.data)
+        if type(tagPhotoData) == dict and 'images' in tagPhotoData:
+            ret['caption'] = tagPhotoData.get('name', None)
+            imgUri = tagPhotoData['images'][0]['source']
+        else:
+            # If returned invalid tag object data, turn to use feed's data
+            imgUri = self._getFbMaxSizePhotoUri(data)
+
+        if not imgUri and 'picture' in data:
+            imgUri = data['picture']
+        imgPath = self._imgLinkHandler(imgUri)
+        if imgPath:
+            ret['photos'].append(imgPath)
+
+        return ret
+
     def _dataParserPhoto(self, data, isFeedApi=True):
         ret = {}
         if isFeedApi:
@@ -472,6 +527,10 @@ class FbApiHandlerBase(FbBase):
         else:
             ret['id'] = '%s_%s' % (self._myFbId, data['id'])
         ret['message'] = data.get('message', None)
+        ret['description'] = data.get('description', None)  # Link description
+        ret['name'] = data.get('name', None)    # Link name
+        if 'picture' in data:
+            ret['picture'] = self._stripSafeImage(data['picture'])
         # Link's caption usually is the link, so we will not export caption here.
         ret['caption'] = None
         if 'application' in data:
@@ -647,6 +706,8 @@ class FbApiHandlerFeed(FbApiHandlerBase):
         elif fType == 'photo':
             if self._isAlbum(data):
                 return self._dataParserAlbum
+            elif self._isTagPhoto(data):
+                return self._dataParserTagPhoto
             else:
                 return self._dataParserPhoto
         elif fType == 'video':
@@ -678,6 +739,11 @@ class FbApiHandlerFeed(FbApiHandlerBase):
                 # Check can_upload to filter 'Wall Photos', 'Mobile photos', or something internal albums
                 return True
 
+        return False
+
+    def _isTagPhoto(self, data):
+        if 'story_tags' in data:
+            return True
         return False
 
 class FbApiHandlerStatuses(FbApiHandlerBase):
