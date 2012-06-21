@@ -601,33 +601,29 @@ class FbApiHandlerBase(FbBase):
         return ret
 
     def _dataParserVideo(self, data, isFeedApi=True):
-        ret = None
-        # For link + story case, it might be event to add friends or join fans page
-        # So we filter story field
-        if not 'story' in data:
-            ret = {}
-            if isFeedApi:
-                ret['id'] = data['id']
-            else:
-                ret['id'] = '%s_%s' % (self._myFbId, data['id'])
-            ret['message'] = data.get('message', None) or data.get('name', None)
-            # Link's caption usually is the link, so we will not export caption here.
-            ret['caption'] = None
-            if 'application' in data:
-                ret['application'] = data['application']['name']
-            ret['createdTime'] = self._convertTimeFormat(data['created_time'])
-            ret['updatedTime'] = self._convertTimeFormat(data['updated_time'])
-            ret['links'] = []
-            if isFeedApi:
-                if 'link' in data:
-                    ret['links'].append(data['link'])
-            else:
-                ret['links'].append('https://www.facebook.com/photo.php?v=%s' % data['id'])
-            ret['photos'] = []
-            if 'picture' in data:
-                imgPath = self._imgLinkHandler(data['picture'])
-                if imgPath:
-                    ret['photos'].append(imgPath)
+        ret = {}
+        if isFeedApi:
+            ret['id'] = data['id']
+        else:
+            ret['id'] = '%s_%s' % (self._myFbId, data['id'])
+        ret['message'] = data.get('message', None) or data.get('name', None)
+        # Link's caption usually is the link, so we will not export caption here.
+        ret['caption'] = None
+        if 'application' in data:
+            ret['application'] = data['application']['name']
+        ret['createdTime'] = self._convertTimeFormat(data['created_time'])
+        ret['updatedTime'] = self._convertTimeFormat(data['updated_time'])
+        ret['links'] = []
+        if isFeedApi:
+            if 'link' in data:
+                ret['links'].append(data['link'])
+        else:
+            ret['links'].append('https://www.facebook.com/photo.php?v=%s' % data['id'])
+        ret['photos'] = []
+        if 'picture' in data:
+            imgPath = self._imgLinkHandler(data['picture'])
+            if imgPath:
+                ret['photos'].append(imgPath)
         return ret
 
 
