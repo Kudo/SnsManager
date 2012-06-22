@@ -70,8 +70,9 @@ class FbImporter(FbBase):
         if not until:
             until = datetime.now() - timedelta(1)
 
-        if not self.isTokenValid():
-            retDict['retCode'] = FbErrorCode.E_INVALID_TOKEN
+        tokenValidRet = self.isTokenValid()
+        if FbErrorCode.IS_FAILED(tokenValidRet):
+            retDict['retCode'] = tokenValidRet
             return retDict
 
         fbId = FbUserInfo(accessToken=self._accessToken, logger=self._logger).getMyId()
@@ -160,17 +161,20 @@ class FbImporter(FbBase):
             resp = json.loads(conn.data)
         except urllib3.exceptions.HTTPError as e:
             self._logger.error('Unable to get data from Facebook. uri[{0}] e[{1}]'.format(uri, e))
-            return False
+            return FbErrorCode.E_FAILED
         except ValueError as e:
             self._logger.error('Unable to parse returned data. data[{0}] e[{1}]'.format(conn.data, e))
-            return False
+            return FbErrorCode.E_FAILED
         if respCode != 200 or len(resp['data']) == 0:
-            return False
+            moreInfoLink = 'https://developers.facebook.com/tools/debug/access_token?q=' + self._accessToken
+            self._logger.info('Invalid token. data[{0}] moreInfoLink[{1}]'.format(conn.data, moreInfoLink))
+            return FbErrorCode.E_INVALID_TOKEN
         for perm in requiredPerms:
             if perm not in resp['data'][0]:
-                return False
-        return True
-
+                moreInfoLink = 'https://developers.facebook.com/tools/debug/access_token?q=' + self._accessToken
+                self._logger.info('Token did not have enough permission. data[{0}] moreInfoLink[{1}]'.format(conn.data, moreInfoLink))
+                return FbErrorCode.E_INVALID_TOKEN
+        return FbErrorCode.S_OK
 
 class FbFeedsHandler(FbBase):
     def __init__(self, *args, **kwargs):
