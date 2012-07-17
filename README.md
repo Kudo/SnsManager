@@ -1,41 +1,21 @@
-Facebook Importer
-====================
+# Social Network Service Manager
 
-1. Introduction
+## 1. Introduction
 ---------------------
-An python module to retrieve Facebook's data based on Graph API.
+A python library to integrate with famous social network.
+Current supported sns:
+- Facebook
+ - Basic self information
+ - Export self posted data on timeline
+- Instagram
+ - Basic self information
+ - Export self posted data
 
 2. Installation
 ---------------------
-- clone to some where and use locally
-
+- clone to somewhere and use locally
 
 3. Usage
 ---------------------
-- To retrieve personal information
-
-```python
-from FbUserInfo import FbUserInfo
-
-fbObj = FbUserInfo(accessToken=<AccessToken>)
-fbObj.getMyName()		    # Get name
-fbObj.getMyEmail()		    # Get email
-fbObj.getMyAvatar()		    # Get avatar uri
-```
-
-- To get feed data
-
-```python
-from FbBase import FbErrorCode
-from FbImporter import FbImporter
-
-fbObj = FbImporter(accessToken=<AccessToken>)
-retDict = fbObj.getData()
-if FbErrorCode.IS_SUCCEEDED(retDict['retCode']):
-    for data in retDict['data']:
-	...
-    count = retDict['count']
-else:
-    print retDict['retCode']
-```
+Check tests/it_*.py for samples.
 
