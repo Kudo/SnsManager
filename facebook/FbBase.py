@@ -1,14 +1,14 @@
 import urllib, urllib2
 import urllib3, urllib3.exceptions
 import json
-from FbBase import FbBase
+from SnsManager.SnsBase import SnsBase
 
-class FbUserInfo(FbBase):
+class FbBase(SnsBase):
     def __init__(self, *args, **kwargs):
         """
-        Constructor of FbUserInfo
+        Constructor of FbBase
         """
-        FbBase.__init__(self, *args, **kwargs)
+        super(FbBase, self).__init__(*args, **kwargs)
         self.myName, self.myEmail, self.myId = self._cacheMyInfo()
 
     def _cacheMyInfo(self):
