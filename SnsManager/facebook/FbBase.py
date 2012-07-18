@@ -9,6 +9,7 @@ class FbBase(SnsBase):
         Constructor of FbBase
         """
         super(FbBase, self).__init__(*args, **kwargs)
+        self._graphUri = 'https://graph.facebook.com/'
         self.myName, self.myEmail, self.myId = self._cacheMyInfo()
 
     def _cacheMyInfo(self):
