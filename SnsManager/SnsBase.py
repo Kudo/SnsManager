@@ -1,6 +1,9 @@
 import urllib3
+from abc import ABCMeta, abstractmethod
 
 class SnsBase(object):
+    __metaclass__ = ABCMeta
+
     class MockLogger(object):
         def __init__(self, *args, **kwargs):
             return None
@@ -26,6 +29,14 @@ class SnsBase(object):
         self._httpConn = urllib3.PoolManager()
         self._timeout = 60
         self._timeout = kwargs.get('timeout', 60)
+
+    @abstractmethod
+    def getMyId(self):
+        pass
+
+    @abstractmethod
+    def isTokenValid(self):
+        pass
 
 class ErrorCode(object):
     S_OK=                   (0x00000000,    'Success')
