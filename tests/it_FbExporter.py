@@ -31,12 +31,12 @@ class TestFbExporter(unittest.TestCase):
         self.assertIn('retCode', resp)
         self.assertEqual(resp['retCode'], ErrorCode.E_INVALID_TOKEN)
 
-    def test_IsTokenValid_GivenValidToken_True(self):
+    def test_IsTokenValid_GivenValidToken_S_OK(self):
         obj = FbExporter(accessToken=TEST_TOKEN)
         resp = obj.isTokenValid()
         self.assertEqual(resp, ErrorCode.S_OK)
 
-    def test_IsTokenValid_GivenInValidToken_False(self):
+    def test_IsTokenValid_GivenInValidToken_E_INVALID_TOKEN(self):
         obj = FbExporter(accessToken='invalid_token')
         resp = obj.isTokenValid()
         self.assertEqual(resp, ErrorCode.E_INVALID_TOKEN)

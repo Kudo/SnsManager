@@ -73,7 +73,7 @@ class FbBase(SnsBase):
             respCode = conn.status
         except urllib3.exceptions.HTTPError as e:
             self._logger.error('Unable to get data from Facebook. uri[{0}] e[{0}]'.format(uri, e))
-            return False
+            return ErrorCode.E_FAILED
         if respCode == 200:
-            return True
-        return False
+            return ErrorCode.S_OK
+        return ErrorCode.E_INVALID_TOKEN

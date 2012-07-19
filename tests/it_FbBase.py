@@ -8,6 +8,7 @@ import sys, os.path
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), os.path.pardir)))
 import unittest
 from SnsManager.facebook.FbBase import FbBase
+from SnsManager import ErrorCode
 
 TEST_TOKEN = 'AccessToken'
 
@@ -24,14 +25,15 @@ class TestFbBase(unittest.TestCase):
         obj = FbBase(accessToken=TEST_TOKEN)
         self.assertTrue(obj.getMyAvatar())
 
-    def test_IsTokenValid_GivenValidToken_True(self):
+    def test_IsTokenValid_GivenValidToken_S_OK(self):
         obj = FbBase(accessToken=TEST_TOKEN)
-        self.assertTrue(obj.isTokenValid())
+        resp = obj.isTokenValid()
+        self.assertEqual(resp, ErrorCode.S_OK)
 
-    def test_IsTokenValid_GivenInValidToken_False(self):
+    def test_IsTokenValid_GivenInValidToken_E_INVALID_TOKEN(self):
         obj = FbBase(accessToken='invalid_token')
-        self.assertFalse(obj.isTokenValid())
-
+        resp = obj.isTokenValid()
+        self.assertEqual(resp, ErrorCode.E_INVALID_TOKEN)
 
 if __name__ == '__main__':
     suite = unittest.TestLoader().loadTestsFromTestCase(TestFbBase)
