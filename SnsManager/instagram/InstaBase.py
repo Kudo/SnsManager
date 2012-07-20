@@ -1,4 +1,3 @@
-import json
 from instagram import InstagramAPI, InstagramAPIError, InstagramClientError
 from SnsManager.SnsBase import SnsBase
 from SnsManager import ErrorCode
