@@ -19,7 +19,7 @@ class InstaBase(SnsBase):
         try:
             api = InstagramAPI(access_token=self._accessToken)
             api.user()
-        except InstagramAPIError, e:
+        except InstagramAPIError as e:
             return ErrorCode.E_INVALID_TOKEN
         except:
             self._logger.exception('InstaBase::isTokenValid() exception')
