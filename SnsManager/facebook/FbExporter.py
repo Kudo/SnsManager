@@ -11,9 +11,9 @@ import lxml.html
 from datetime import datetime, timedelta
 from dateutil import parser as dateParser
 from FbBase import FbBase
-from SnsManager import ErrorCode
+from SnsManager import ErrorCode, IExporter
 
-class FbExporter(FbBase):
+class FbExporter(FbBase, IExporter):
     def __init__(self, *args, **kwargs):
         """
         Constructor of FbExporter
