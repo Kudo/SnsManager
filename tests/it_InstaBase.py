@@ -8,7 +8,7 @@ import unittest
 from SnsManager import ErrorCode
 from SnsManager.instagram import InstaBase
 
-TEST_TOKEN = '31413082.8d5ac3f.ad80209831e34da0b894e784f8536394'
+TEST_TOKEN = 'TestToken'
 
 class TestInstaBase(unittest.TestCase):
     def test_GetMyId_GivenValidToken_True(self):

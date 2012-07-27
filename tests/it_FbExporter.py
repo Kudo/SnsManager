@@ -11,7 +11,7 @@ from SnsManager.facebook.FbExporter import FbExporter
 import unittest
 import logging
 
-TEST_TOKEN = 'AAAFExPZCm0AwBAE5kSkN0srI5B3XpuCYD2n7WKzVeRCewpvcvMH3x7jJ2ZB2ZC48CW9MZCroGx8OAKxaefcAeZB2VMRj2z8sPB9S6dRSwtlQLsp71mGXk'
+TEST_TOKEN = 'TestToken'
 
 class TestFbExporter(unittest.TestCase):
     def test_GetData_ReturnValidFormat_True(self):
