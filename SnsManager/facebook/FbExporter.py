@@ -125,14 +125,14 @@ class FbExporter(FbBase, IExporter):
                     parsedData, stopCrawling = apiHandler.parse()
                     self._mergeData(retDict['data'], parsedData)
 
-                try:
-                    newSince = urlparse.parse_qs(urlparse.urlsplit(data['paging']['next']).query)['until'][0]
+                pagingNext = urlparse.parse_qs(urlparse.urlsplit(data['paging']['next']).query)
+                if 'until' in pagingNext:
+                    newSince = pagingNext['until'][0]
                     newSince = datetime.fromtimestamp(int(newSince))
-                except:
-                    self._logger.exception('Unable to have "until" in paging next, turn to use after and filter by createdTime')
+                elif 'after' in pagingNext:
                     # Some Graph API call did not return until but with an 'after' instead
                     # For this case, we follow after call and filter returned elements by createdTime
-                    _after = urlparse.parse_qs(urlparse.urlsplit(data['paging']['next']).query)['after'][0]
+                    _after = pagingNext['after'][0]
 
                 if _after:
                     errorCode, data = self._apiCrawler(api, _since, _until, after=_after)
