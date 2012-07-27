@@ -1,14 +1,15 @@
 import urllib, urllib2
 import urllib3, urllib3.exceptions
 import json
-from FbBase import FbBase
+from SnsManager.SnsBase import SnsBase
 
-class FbUserInfo(FbBase):
+class FbBase(SnsBase):
     def __init__(self, *args, **kwargs):
         """
-        Constructor of FbUserInfo
+        Constructor of FbBase
         """
-        FbBase.__init__(self, *args, **kwargs)
+        super(FbBase, self).__init__(*args, **kwargs)
+        self._graphUri = 'https://graph.facebook.com/'
         self.myName, self.myEmail, self.myId = self._cacheMyInfo()
 
     def _cacheMyInfo(self):
@@ -72,7 +73,7 @@ class FbUserInfo(FbBase):
             respCode = conn.status
         except urllib3.exceptions.HTTPError as e:
             self._logger.error('Unable to get data from Facebook. uri[{0}] e[{0}]'.format(uri, e))
-            return False
+            return ErrorCode.E_FAILED
         if respCode == 200:
-            return True
-        return False
+            return ErrorCode.S_OK
+        return ErrorCode.E_INVALID_TOKEN

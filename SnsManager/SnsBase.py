@@ -1,6 +1,9 @@
 import urllib3
+from abc import ABCMeta, abstractmethod
 
-class FbBase(object):
+class SnsBase(object):
+    __metaclass__ = ABCMeta
+
     class MockLogger(object):
         def __init__(self, *args, **kwargs):
             return None
@@ -11,7 +14,7 @@ class FbBase(object):
 
     def __init__(self, *args, **kwargs):
         """
-        Constructor of FbBase
+        Constructor of SnsBase
 
         In:
             accessToken         --  accessToken
@@ -21,14 +24,21 @@ class FbBase(object):
         if 'accessToken' not in kwargs:
             raise ValueError('Invalid parameters.')
         self._accessToken = kwargs['accessToken']
-        self._logger = kwargs.get('logger', FbBase.MockLogger())
+        self._logger = kwargs.get('logger', SnsBase.MockLogger())
 
-        self._graphUri = 'https://graph.facebook.com/'
         self._httpConn = urllib3.PoolManager()
         self._timeout = 60
         self._timeout = kwargs.get('timeout', 60)
 
-class FbErrorCode(object):
+    @abstractmethod
+    def getMyId(self):
+        pass
+
+    @abstractmethod
+    def isTokenValid(self):
+        pass
+
+class ErrorCode(object):
     S_OK=                   (0x00000000,    'Success')
 
     E_FAILED=               (0x10000000,    'Generic error')
