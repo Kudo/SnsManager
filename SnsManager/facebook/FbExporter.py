@@ -125,6 +125,11 @@ class FbExporter(FbBase, IExporter):
                     parsedData, stopCrawling = apiHandler.parse()
                     self._mergeData(retDict['data'], parsedData)
 
+                if 'next' not in data['paging']:
+                    self._logger.debug('Unable to locate next in paging.')
+                    errorCode = ErrorCode.E_NO_DATA
+                    continue
+
                 pagingNext = urlparse.parse_qs(urlparse.urlsplit(data['paging']['next']).query)
                 if 'until' in pagingNext:
                     newSince = pagingNext['until'][0]
@@ -527,15 +532,17 @@ class FbExporter(FbBase, IExporter):
             else:
                 ret['updatedTime'] = self._convertTimeFormat(data['created_time'])
             ret['links'] = []
+            isFacebookLink = False
             if 'link' in data:
-                isFacebookLink = False
                 if data['link'][0] == '/':
                     data['link'] = 'http://www.facebook.com%s' % (data['link'])
                 if re.search('^https?://www\.facebook\.com/.*$', data['link']):
                     isFacebookLink = True
                     ret['links'].append(data['link'])
-                elif not re.search('^https?://apps\.facebook\.com/.*$', data['link']):
+                elif re.search('^https?://apps\.facebook\.com/.*$', data['link']):
                     # Skip Facebook apps' link
+                    pass
+                else:
                     ret['links'].append(data['link'])
 
             # For Facebook link, try to expose more information as possible
