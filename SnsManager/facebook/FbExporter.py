@@ -206,7 +206,11 @@ class FbExporter(FbBase, IExporter):
         except: 
             self._logger.exception('Unable to get data from Facebook')
             return ErrorCode.E_FAILED, {}
-        retDict = json.loads(conn.data)
+        try:
+            retDict = json.loads(conn.data)
+        except ValueError:
+            self._logger.info('Unable to parse returned data. conn.data[%s]' % conn.data)
+            return ErrorCode.E_FAILED, {}
         if 'data' not in retDict or 'paging' not in retDict:
             return ErrorCode.E_NO_DATA, {}
         return ErrorCode.S_OK, retDict
