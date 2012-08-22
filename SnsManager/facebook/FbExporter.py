@@ -571,7 +571,10 @@ class FbExporter(FbBase, IExporter):
             content = data.get('description', None) or data.get('message', None)
             if content:
                 content = re.sub('<br\s*?/?>', '\n', content)
-                content = lxml.html.fromstring(content).text_content()
+                try:
+                    content = lxml.html.fromstring(content).text_content()
+                except:
+                    self.outerObj._logger.info('Unable to purify html. content[%s]' % content)
             ret['caption'] = content
             if 'application' in data:
                 ret['application'] = data['application']['name']
