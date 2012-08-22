@@ -257,6 +257,9 @@ class FbExporter(FbBase, IExporter):
 
             retData = []
             for data in self._data['data']:
+                # In some case, Facebook returned "from": null and we will skip this case.
+                if data['from'] is None:
+                    continue
                 # Strip contents which not posted by me
                 if data['from']['id'] != self.outerObj.myId:
                     continue
