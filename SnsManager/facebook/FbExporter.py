@@ -278,6 +278,8 @@ class FbExporter(FbBase, IExporter):
             return None
 
         def _convertTimeFormat(self, fbTime):
+            if not fbTime:
+                raise ValueError('Unable to find any time info in feed.')
             return dateParser.parse(fbTime)
 
         def _storeFileToTemp(self, fileUri):
@@ -359,11 +361,8 @@ class FbExporter(FbBase, IExporter):
                     ret['id'] = '%s_%s' % (self.outerObj.myId, data['id'])
                 ret['message'] = data['message']
                 ret['caption'] = data.get('caption', None)
-                if isFeedApi:
-                    ret['createdTime'] = self._convertTimeFormat(data['created_time'])
-                else:
-                    ret['createdTime'] = self._convertTimeFormat(data['updated_time'])
-                ret['updatedTime'] = self._convertTimeFormat(data['updated_time'])
+                ret['createdTime'] = self._convertTimeFormat(data.get('created_time', data.get('updated_time', None)))
+                ret['updatedTime'] = self._convertTimeFormat(data.get('updated_time', data.get('created_time', None)))
                 if 'application' in data:
                     ret['application'] = data['application']['name']
                 ret['links'] = []
@@ -411,8 +410,8 @@ class FbExporter(FbBase, IExporter):
 
             if 'application' in data:
                 ret['application'] = data['application']['name']
-            ret['createdTime'] = self._convertTimeFormat(data['created_time'])
-            ret['updatedTime'] = self._convertTimeFormat(data['updated_time'])
+            ret['createdTime'] = self._convertTimeFormat(data.get('created_time', data.get('updated_time', None)))
+            ret['updatedTime'] = self._convertTimeFormat(data.get('updated_time', data.get('created_time', None)))
             # album type's link usually could not access outside, so we will not export link for photo type
             ret['links'] = []
 
@@ -446,8 +445,8 @@ class FbExporter(FbBase, IExporter):
             ret['message'] = data.get('message', None) or data.get('story', None)
             if 'application' in data:
                 ret['application'] = data['application']['name']
-            ret['createdTime'] = self._convertTimeFormat(data['created_time'])
-            ret['updatedTime'] = self._convertTimeFormat(data['updated_time'])
+            ret['createdTime'] = self._convertTimeFormat(data.get('created_time', data.get('updated_time', None)))
+            ret['updatedTime'] = self._convertTimeFormat(data.get('updated_time', data.get('created_time', None)))
             # photo type's link usually could not access outside, so we will not export link for photo type
             ret['links'] = []
             ret['photos'] = []
@@ -493,8 +492,8 @@ class FbExporter(FbBase, IExporter):
             ret['caption'] = data.get('caption', None)
             if 'application' in data:
                 ret['application'] = data['application']['name']
-            ret['createdTime'] = self._convertTimeFormat(data['created_time'])
-            ret['updatedTime'] = self._convertTimeFormat(data['updated_time'])
+            ret['createdTime'] = self._convertTimeFormat(data.get('created_time', data.get('updated_time', None)))
+            ret['updatedTime'] = self._convertTimeFormat(data.get('updated_time', data.get('created_time', None)))
             # photo type's link usually could not access outside, so we will not export link for photo type
             ret['links'] = []
             ret['photos'] = []
@@ -526,11 +525,8 @@ class FbExporter(FbBase, IExporter):
             ret['caption'] = None
             if 'application' in data:
                 ret['application'] = data['application']['name']
-            ret['createdTime'] = self._convertTimeFormat(data['created_time'])
-            if isFeedApi:
-                ret['updatedTime'] = self._convertTimeFormat(data['updated_time'])
-            else:
-                ret['updatedTime'] = self._convertTimeFormat(data['created_time'])
+            ret['createdTime'] = self._convertTimeFormat(data.get('created_time', data.get('updated_time', None)))
+            ret['updatedTime'] = self._convertTimeFormat(data.get('updated_time', data.get('created_time', None)))
             ret['links'] = []
             isFacebookLink = False
             if 'link' in data:
@@ -578,11 +574,8 @@ class FbExporter(FbBase, IExporter):
             ret['caption'] = content
             if 'application' in data:
                 ret['application'] = data['application']['name']
-            ret['createdTime'] = self._convertTimeFormat(data['created_time'])
-            if isFeedApi:
-                ret['updatedTime'] = self._convertTimeFormat(data['updated_time'])
-            else:
-                ret['updatedTime'] = self._convertTimeFormat(data['created_time'])
+            ret['createdTime'] = self._convertTimeFormat(data.get('created_time', data.get('updated_time', None)))
+            ret['updatedTime'] = self._convertTimeFormat(data.get('updated_time', data.get('created_time', None)))
             ret['links'] = []
             if 'link' in data:
                 if data['link'][0] == '/':
@@ -607,8 +600,8 @@ class FbExporter(FbBase, IExporter):
             ret['caption'] = None
             if 'application' in data:
                 ret['application'] = data['application']['name']
-            ret['createdTime'] = self._convertTimeFormat(data['created_time'])
-            ret['updatedTime'] = self._convertTimeFormat(data['updated_time'])
+            ret['createdTime'] = self._convertTimeFormat(data.get('created_time', data.get('updated_time', None)))
+            ret['updatedTime'] = self._convertTimeFormat(data.get('updated_time', data.get('created_time', None)))
             ret['links'] = []
             if isFeedApi:
                 if 'link' in data:
@@ -649,11 +642,8 @@ class FbExporter(FbBase, IExporter):
             if 'application' in data:
                 ret['application'] = data['application']['name']
 
-            ret['createdTime'] = self._convertTimeFormat(data['created_time'])
-            if isFeedApi:
-                ret['updatedTime'] = self._convertTimeFormat(data['updated_time'])
-            else:
-                ret['updatedTime'] = self._convertTimeFormat(data['created_time'])
+            ret['createdTime'] = self._convertTimeFormat(data.get('created_time', data.get('updated_time', None)))
+            ret['updatedTime'] = self._convertTimeFormat(data.get('updated_time', data.get('created_time', None)))
 
             # checkin type's link usually could not access outside, so we will not export link for photo type
             ret['links'] = []
