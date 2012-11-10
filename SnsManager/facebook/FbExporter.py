@@ -646,10 +646,10 @@ class FbExporter(FbBase, IExporter):
                     'latitude': lat,
                     'longitude': lnt
                 }
-            if 'tags' in data:
-                if 'data' in data['tags'] and len(data['tags']['data']) > 0:
+            if 'with_tags' in data:
+                if 'data' in data['with_tags'] and len(data['with_tags']['data']) > 0:
                     ret['people'] = []
-                    for tag in data['tags']['data']:
+                    for tag in data['with_tags']['data']:
                         ret['people'].append(tag)
                         
             if 'application' in data:
