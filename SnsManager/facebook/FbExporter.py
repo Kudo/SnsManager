@@ -458,6 +458,24 @@ class FbExporter(FbBase, IExporter):
             ret['links'] = []
             ret['photos'] = []
 
+            if 'place' in data:
+                lat = None
+                lnt = None
+                if 'location' in data['place']:
+                    lat = data['place']['location']['latitude']
+                    lnt = data['place']['location']['longitude']
+                ret['place'] = {
+                    'name': data['place']['name'],
+                    'latitude': lat,
+                    'longitude': lnt
+                }
+
+            if 'with_tags' in data:
+                if 'data' in data['with_tags'] and len(data['with_tags']['data']) > 0:
+                    ret['people'] = []
+                    for tag in data['with_tags']['data']:
+                        ret['people'].append(tag)
+ 
             uri = '{0}{1}/?{2}'.format(self.outerObj._graphUri, data['object_id'], urllib.urlencode(params))
             self.outerObj._logger.debug('Tag photo URI to retrieve [%s]' % uri)
             try:
