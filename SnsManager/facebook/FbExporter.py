@@ -376,6 +376,25 @@ class FbExporter(FbBase, IExporter):
                 if 'link' in data:
                     ret['links'].append(data['link'])
                 ret['photos'] = []
+
+                if 'place' in data:
+                    lat = None
+                    lnt = None
+                    if 'location' in data['place']:
+                        lat = data['place']['location']['latitude']
+                        lnt = data['place']['location']['longitude']
+                    ret['place'] = {
+                        'name': data['place']['name'],
+                        'latitude': lat,
+                        'longitude': lnt
+                    }
+
+                if 'with_tags' in data:
+                    if 'data' in data['with_tags'] and len(data['with_tags']['data']) > 0:
+                        ret['people'] = []
+                        for tag in data['with_tags']['data']:
+                            ret['people'].append(tag)
+ 
                 if 'picture' in data:
                     imgPath = self._imgLinkHandler(data['picture'])
                     if imgPath:
