@@ -363,6 +363,15 @@ class FbExporter(FbBase, IExporter):
                 people = data[tagName]['data']
             return people
 
+        def _getGpsInfo(self, data):
+            place = None
+            if 'place' in data:
+                place = { 'name': data['place']['name'] }
+                if 'location' in data['place']:
+                    place['latitude'] = data['place']['location']['latitude']
+                    place['longitude'] = data['place']['location']['longitude']
+            return place
+
         def _dataParserStatus(self, data, isFeedApi=True):
             ret = None
             # For status + story case, it might be event commenting to friend or adding friend
@@ -384,17 +393,9 @@ class FbExporter(FbBase, IExporter):
                     ret['links'].append(data['link'])
                 ret['photos'] = []
 
-                if 'place' in data:
-                    lat = None
-                    lnt = None
-                    if 'location' in data['place']:
-                        lat = data['place']['location']['latitude']
-                        lnt = data['place']['location']['longitude']
-                    ret['place'] = {
-                        'name': data['place']['name'],
-                        'latitude': lat,
-                        'longitude': lnt
-                    }
+                place = self._getGpsInfo(data)
+                if place:
+                    ret['place'] = place
 
                 people = self._getTagPeople(data)
                 if people:
@@ -482,17 +483,9 @@ class FbExporter(FbBase, IExporter):
             ret['links'] = []
             ret['photos'] = []
 
-            if 'place' in data:
-                lat = None
-                lnt = None
-                if 'location' in data['place']:
-                    lat = data['place']['location']['latitude']
-                    lnt = data['place']['location']['longitude']
-                ret['place'] = {
-                    'name': data['place']['name'],
-                    'latitude': lat,
-                    'longitude': lnt
-                }
+            place = self._getGpsInfo(data)
+            if place:
+                ret['place'] = place
 
             people = self._getTagPeople(data)
             if people:
@@ -544,17 +537,9 @@ class FbExporter(FbBase, IExporter):
             # photo type's link usually could not access outside, so we will not export link for photo type
             ret['links'] = []
 
-            if 'place' in data:
-                lat = None
-                lnt = None
-                if 'location' in data['place']:
-                    lat = data['place']['location']['latitude']
-                    lnt = data['place']['location']['longitude']
-                ret['place'] = {
-                    'name': data['place']['name'],
-                    'latitude': lat,
-                    'longitude': lnt
-                }
+            place = self._getGpsInfo(data)
+            if place:
+                ret['place'] = place
 
             people = self._getTagPeople(data)
             if people:
@@ -690,18 +675,10 @@ class FbExporter(FbBase, IExporter):
                 ret['caption'] = data['caption']
             else:
                 ret['caption'] = 'checked in at %s' % (data['place']['name'])
-            # get checkin's place
-            if 'place' in data:
-                lat = None
-                lnt = None
-                if 'location' in data['place']:
-                    lat = data['place']['location']['latitude']
-                    lnt = data['place']['location']['longitude']
-                ret['place'] = {
-                    'name': data['place']['name'],
-                    'latitude': lat,
-                    'longitude': lnt
-                }
+
+            place = self._getGpsInfo(data)
+            if place:
+                ret['place'] = place
 
             people = self._getTagPeople(data)
             if people:
