@@ -357,6 +357,11 @@ class FbExporter(FbBase, IExporter):
                 return resp['images'][0]['source']
             return None
 
+        def _getTagPeople(self, data, tagName='with_tags'):
+            people = None
+            if tagName in data and 'data' in data[tagName] and len(data[tagName]['data']) > 0:
+                people = data[tagName]['data']
+            return people
 
         def _dataParserStatus(self, data, isFeedApi=True):
             ret = None
@@ -391,12 +396,10 @@ class FbExporter(FbBase, IExporter):
                         'longitude': lnt
                     }
 
-                if 'with_tags' in data:
-                    if 'data' in data['with_tags'] and len(data['with_tags']['data']) > 0:
-                        ret['people'] = []
-                        for tag in data['with_tags']['data']:
-                            ret['people'].append(tag)
- 
+                people = self._getTagPeople(data)
+                if people:
+                    ret['people'] = people
+
                 if 'picture' in data:
                     imgPath = self._imgLinkHandler(data['picture'])
                     if imgPath:
@@ -491,12 +494,10 @@ class FbExporter(FbBase, IExporter):
                     'longitude': lnt
                 }
 
-            if 'with_tags' in data:
-                if 'data' in data['with_tags'] and len(data['with_tags']['data']) > 0:
-                    ret['people'] = []
-                    for tag in data['with_tags']['data']:
-                        ret['people'].append(tag)
- 
+            people = self._getTagPeople(data)
+            if people:
+                ret['people'] = people
+
             uri = '{0}{1}/?{2}'.format(self.outerObj._graphUri, data['object_id'], urllib.urlencode(params))
             self.outerObj._logger.debug('Tag photo URI to retrieve [%s]' % uri)
             try:
@@ -555,12 +556,10 @@ class FbExporter(FbBase, IExporter):
                     'longitude': lnt
                 }
 
-            if 'with_tags' in data:
-                if 'data' in data['with_tags'] and len(data['with_tags']['data']) > 0:
-                    ret['people'] = []
-                    for tag in data['with_tags']['data']:
-                        ret['people'].append(tag)
- 
+            people = self._getTagPeople(data)
+            if people:
+                ret['people'] = people
+
             ret['photos'] = []
             imgUri = self._getFbMaxSizePhotoUri(data)
             if not imgUri and 'picture' in data:
@@ -680,7 +679,6 @@ class FbExporter(FbBase, IExporter):
                     ret['photos'].append(imgPath)
             return ret
 
-
         def _dataParserCheckin(self, data, isFeedApi=True):
             ret = {}
             if isFeedApi:
@@ -704,12 +702,11 @@ class FbExporter(FbBase, IExporter):
                     'latitude': lat,
                     'longitude': lnt
                 }
-            if 'with_tags' in data:
-                if 'data' in data['with_tags'] and len(data['with_tags']['data']) > 0:
-                    ret['people'] = []
-                    for tag in data['with_tags']['data']:
-                        ret['people'].append(tag)
-                        
+
+            people = self._getTagPeople(data)
+            if people:
+                ret['people'] = people
+
             if 'application' in data:
                 ret['application'] = data['application']['name']
 
