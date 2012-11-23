@@ -82,7 +82,7 @@ class FbExporter(FbBase, IExporter):
             return retDict
 
         # Please make sure feed placed in first api call, since we are now havve more confident for feed API data
-        for api in ['feed', 'statuses', 'checkins', 'videos', 'links', 'notes']:
+        for api in ['feed', 'statuses', 'checkins', 'videos', 'links', 'notes', 'tagged']:
             if api != 'feed' and self._multiApiCrawlerSince and (not since or since > self._multiApiCrawlerSince):
                 _since = self._multiApiCrawlerSince
                 if _since < until:
@@ -165,6 +165,8 @@ class FbExporter(FbBase, IExporter):
             return self.FbApiHandlerLinks
         elif api == 'notes':
             return self.FbApiHandlerNotes
+        elif api == 'tagged':
+            return self.FbApiHandlerTagged
         else:
             return None
 
@@ -540,6 +542,25 @@ class FbExporter(FbBase, IExporter):
             ret['updatedTime'] = self._convertTimeFormat(data.get('updated_time', data.get('created_time', None)))
             # photo type's link usually could not access outside, so we will not export link for photo type
             ret['links'] = []
+
+            if 'place' in data:
+                lat = None
+                lnt = None
+                if 'location' in data['place']:
+                    lat = data['place']['location']['latitude']
+                    lnt = data['place']['location']['longitude']
+                ret['place'] = {
+                    'name': data['place']['name'],
+                    'latitude': lat,
+                    'longitude': lnt
+                }
+
+            if 'with_tags' in data:
+                if 'data' in data['with_tags'] and len(data['with_tags']['data']) > 0:
+                    ret['people'] = []
+                    for tag in data['with_tags']['data']:
+                        ret['people'].append(tag)
+ 
             ret['photos'] = []
             imgUri = self._getFbMaxSizePhotoUri(data)
             if not imgUri and 'picture' in data:
@@ -777,6 +798,10 @@ class FbExporter(FbBase, IExporter):
     class FbApiHandlerStatuses(FbApiHandlerBase):
         def parseInner(self, data):
             return self._dataParserStatus(data, isFeedApi=False)
+
+    class FbApiHandlerTagged(FbApiHandlerBase):
+        def parseInner(self, data):
+            return self._dataParserCheckin(data, isFeedApi=False)
 
     class FbApiHandlerCheckins(FbApiHandlerBase):
         def parseInner(self, data):
