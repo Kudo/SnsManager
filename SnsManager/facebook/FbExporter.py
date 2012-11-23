@@ -267,8 +267,8 @@ class FbExporter(FbBase, IExporter):
                 if data['from'] is None:
                     continue
                 # Strip contents which not posted by me
-                if data['from']['id'] != self.outerObj.myId:
-                    continue
+                #if data['from']['id'] != self.outerObj.myId:
+                #    continue
 
                 parsedData = self.parseInner(data)
                 if parsedData:
