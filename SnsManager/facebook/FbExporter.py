@@ -489,6 +489,54 @@ class FbExporter(FbBase, IExporter):
 
             return ret
 
+        def _dataParserMultiPhotoCheckin(self, data, isFeedApi=True):
+            ret = {}
+            if isFeedApi:
+                ret['id'] = data['id']
+            else:
+                ret['id'] = '%s_%s' % (self.outerObj.myId, data['id'])
+            ret['message'] = data.get('message', None)
+            ret['caption'] = None
+
+            if 'application' in data:
+                ret['application'] = data['application']['name']
+            ret['createdTime'] = self._convertTimeFormat(data.get('created_time', data.get('updated_time', None)))
+            ret['updatedTime'] = self._convertTimeFormat(data.get('updated_time', data.get('created_time', None)))
+            ret['links'] = []
+
+            ret['photos'] = []
+            # FIXME: Currently Facebook do not have API way to get checkin photos, so we list all photos in the album.
+            # Please note that this methodology cannot exactly match the checkin photos.
+            searchResult = re.search('^https?://www\.facebook\.com\/photo\.php[?&]fbid=(\d+?)&', data['link'])
+            if searchResult is not None:
+                # [0] Get album id from photo object
+                photoId = searchResult.group(1)
+                params = {
+                    'access_token' : self.outerObj._accessToken,
+                }
+                uri = '{0}{1}/?{2}'.format(self.outerObj._graphUri, photoId, urllib.urlencode(params))
+                try:
+                    conn = self.outerObj._httpConn.urlopen('GET', uri, timeout=self.outerObj._timeout)
+                except:
+                    self.outerObj._logger.error('Unable to get photo object from link: {0}'.format(data['link']))
+                    return ret
+                photoObj = json.loads(conn.data)
+                if type(photoObj) == dict and 'link' in photoObj:
+                    searchResult = re.search('^https?://www\.facebook\.com\/photo\.php\?.+&set=a\.(\d+?)\.', photoObj['link'])
+                    if searchResult is not None:
+                        albumId = searchResult.group(1)
+                        self.outerObj._logger.info("found an albumID from a photo link: {0}".format(albumId))
+                        # [1] Retrieve photos in album
+                        feedHandler = self.outerObj.FbAlbumFeedsHandler(id=albumId, outerObj=self.outerObj)
+                        retPhotos = feedHandler.getPhotos(maxLimit=0, basetime=ret['createdTime'], timerange=timedelta(minutes=20))
+                        if ErrorCode.IS_SUCCEEDED(retPhotos['retCode']):
+                            ret['photos'] = retPhotos['data']
+            else:
+                self.outerObj._logger.error('Unable to find photo id from link: {0}'.format(data['link']))
+
+            return ret
+
+
         def _dataParserTagPhoto(self, data, isFeedApi=True):
             ret = {}
             if isFeedApi:
@@ -763,6 +811,8 @@ class FbExporter(FbBase, IExporter):
             elif fType == 'photo':
                 if self._isAlbum(data):
                     return self._dataParserAlbum
+                elif self._isMultiPhotoCheckin(data):
+                    return self._dataParserMultiPhotoCheckin
                 elif self._isTagPhoto(data):
                     return self._dataParserTagPhoto
                 else:
@@ -797,6 +847,12 @@ class FbExporter(FbBase, IExporter):
                     return True
 
             return False
+
+        def _isMultiPhotoCheckin(self, data):
+            searchResult = re.search('^https?://www\.facebook\.com\/photo\.php\?.+&set=pcb\.(\d+?)[.&]', data['link'])
+            if not searchResult:
+                return False
+            return True
 
         def _isTagPhoto(self, data):
             if 'story_tags' in data:
