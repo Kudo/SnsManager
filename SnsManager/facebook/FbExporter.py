@@ -791,7 +791,7 @@ class FbExporter(FbBase, IExporter):
                 return False
             retDict = json.loads(conn.data)
             # If album owner is me and it's uploadable, the album is what we should crawl
-            if type(retDict) == dict and 'from' in retDict and retDict['from']['id'] == self.outerObj.myId:
+            if type(retDict) == dict and 'from' in retDict and type(retDict['from']) == dict and retDict['from']['id'] == self.outerObj.myId:
                 if retDict['can_upload']:
                     # Check can_upload to filter 'Wall Photos', 'Mobile photos', or something internal albums
                     return True
