@@ -713,7 +713,10 @@ class FbExporter(FbBase, IExporter):
             if place:
                 ret['place'] = place
 
-            people = self._getTagPeople(data)
+            if isFeedApi:
+                people = self._getTagPeople(data)
+            else:
+                people = self._getTagPeople(data, tagName='tags')
             if people:
                 ret['people'] = people
 
