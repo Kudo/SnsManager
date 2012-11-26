@@ -360,7 +360,10 @@ class FbExporter(FbBase, IExporter):
         def _getTagPeople(self, data, tagName='with_tags'):
             people = None
             if tagName in data and 'data' in data[tagName] and len(data[tagName]['data']) > 0:
-                people = data[tagName]['data']
+                people = [{
+                    'id': person['id'],
+                    'name': person['name'],
+                } for person in data[tagName]['data']]
             return people
 
         def _getGpsInfo(self, data):
@@ -371,6 +374,27 @@ class FbExporter(FbBase, IExporter):
                     place['latitude'] = data['place']['location']['latitude']
                     place['longitude'] = data['place']['location']['longitude']
             return place
+
+        def _getVideoTag(self, data, tagName='tags', objectIdName='object_id'):
+            """
+            To get video tags, we should get from video object due to feed data do not always expose those information.
+            """
+            if objectIdName not in data:
+                return None
+            params = {
+                'access_token' : self.outerObj._accessToken,
+                'fields': 'tags',
+            }
+            uri = '{0}{1}?{2}'.format(self.outerObj._graphUri, data[objectIdName], urllib.urlencode(params))
+            try:
+                conn = self.outerObj._httpConn.urlopen('GET', uri, timeout=self.outerObj._timeout)
+                resp = json.loads(conn.data)
+            except:
+                self.outerObj._logger.exception('Unable to get object from Facebook. uri[%s]' % (uri))
+                return None
+            if type(resp) == dict:
+                return self._getTagPeople(resp, tagName)
+            return None
 
         def _dataParserStatus(self, data, isFeedApi=True):
             ret = None
@@ -655,8 +679,14 @@ class FbExporter(FbBase, IExporter):
             if isFeedApi:
                 if 'link' in data:
                     ret['links'].append(data['link'])
+                people = self._getVideoTag(data)
+                if people:
+                    ret['people'] = people
             else:
                 ret['links'].append('https://www.facebook.com/photo.php?v=%s' % data['id'])
+                people = self._getTagPeople(data)
+                if people:
+                    ret['people'] = people
             ret['photos'] = []
             if 'picture' in data:
                 imgPath = self._imgLinkHandler(data['picture'])
