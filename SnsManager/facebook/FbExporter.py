@@ -82,7 +82,7 @@ class FbExporter(FbBase, IExporter):
             return retDict
 
         # Please make sure feed placed in first api call, since we are now havve more confident for feed API data
-        for api in ['feed', 'statuses', 'checkins', 'videos', 'links', 'notes', 'tagged']:
+        for api in ['feed', 'statuses', 'checkins', 'videos', 'links', 'notes']:
             if api != 'feed' and self._multiApiCrawlerSince and (not since or since > self._multiApiCrawlerSince):
                 _since = self._multiApiCrawlerSince
                 if _since < until:
@@ -165,8 +165,6 @@ class FbExporter(FbBase, IExporter):
             return self.FbApiHandlerLinks
         elif api == 'notes':
             return self.FbApiHandlerNotes
-        elif api == 'tagged':
-            return self.FbApiHandlerTagged
         else:
             return None
 
@@ -808,10 +806,6 @@ class FbExporter(FbBase, IExporter):
     class FbApiHandlerStatuses(FbApiHandlerBase):
         def parseInner(self, data):
             return self._dataParserStatus(data, isFeedApi=False)
-
-    class FbApiHandlerTagged(FbApiHandlerBase):
-        def parseInner(self, data):
-            return self._dataParserCheckin(data, isFeedApi=False)
 
     class FbApiHandlerCheckins(FbApiHandlerBase):
         def parseInner(self, data):
