@@ -7,7 +7,7 @@ import unittest
 from SnsManager import ErrorCode
 from SnsManager.google import GoogleBase
 
-TEST_TOKEN = 'ya29.AHES6ZSOEi2x7tbciVT2VNRTofIBfxnXapO01WtHf5HzIw'
+TEST_TOKEN = 'TEST_TOKEN'
 
 class TestGoogleBase(unittest.TestCase):
     def test_GetMyId_GivenValidToken_True(self):
