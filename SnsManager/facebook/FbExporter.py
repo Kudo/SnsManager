@@ -361,6 +361,7 @@ class FbExporter(FbBase, IExporter):
                 people = [{
                     'id': person['id'],
                     'name': person['name'],
+                    'avatar': '{0}{1}/picture'.format(self.outerObj._graphUri, person['id']),
                 } for person in data[tagName]['data']]
             return people
 
