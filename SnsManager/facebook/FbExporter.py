@@ -86,7 +86,7 @@ class FbExporter(FbBase, IExporter):
             if api != 'feed' and self._multiApiCrawlerSince and (not since or since > self._multiApiCrawlerSince):
                 _since = self._multiApiCrawlerSince
                 if _since < until:
-                    self._logger.info('multiApiCrawlerSince < until, skip this API call. api[%s]' % (api))
+                    #self._logger.info('multiApiCrawlerSince < until, skip this API call. api[%s]' % (api))
                     continue
             else:
                 _since = since
@@ -270,6 +270,11 @@ class FbExporter(FbBase, IExporter):
 
                 parsedData = self.parseInner(data)
                 if parsedData:
+                    if data['from']['id'] == self.outerObj.myId:
+                        parsedData['fromMe'] = True
+                    else:
+                        parsedData['fromMe'] = False
+
                     if not filterDateInfo:
                         self._dumpData(parsedData)
                         retData.append(parsedData)
