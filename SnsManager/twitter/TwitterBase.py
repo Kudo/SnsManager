@@ -24,7 +24,7 @@ class TwitterBase(SnsBase):
 
     def isTokenValid(self):
         try:
-            _myId  = self._tweepy.me().name
+            _myId = self._tweepy.me().name
         except tweepy.TweepError as e:
             return ErrorCode.E_INVALID_TOKEN
         return ErrorCode.S_OK
