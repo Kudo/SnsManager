@@ -46,6 +46,7 @@ class TwitterExporter(TwitterBase, IExporter):
         if not self.myId:
             return retDict
 
+        retLastSyncId = None
         if exportDirection == self.EXPORT_DIRECTION_BACKWARD:
             params = {}
             if lastSyncId:
@@ -56,12 +57,15 @@ class TwitterExporter(TwitterBase, IExporter):
                     'message': status.text,
                     'createdTime': status.created_at
                 }
+                retLastSyncId = status.id
                 retDict['data'][data['id']] = data
         else:
             params = {}
             if lastSyncId:
                 params['since_id'] = lastSyncId
             for status in tweepy.Cursor(self._tweepy.user_timeline, **params).items():
+                if not retLastSyncId:
+                    retLastSyncId = status.id
                 data = {
                     'id': status.id,
                     'message': status.text,
@@ -69,6 +73,7 @@ class TwitterExporter(TwitterBase, IExporter):
                 }
                 retDict['data'][data['id']] = data
 
+        retDict['lastSyncId'] = retLastSyncId
         retDict['count'] = len(retDict['data'])
         retDict['retCode'] = ErrorCode.S_OK
 
