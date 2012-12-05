@@ -44,6 +44,7 @@ class ErrorCode(object):
     E_FAILED=               (0x10000000,    'Generic error')
     E_NO_DATA=              (0x10000001,    'No more data')
     E_INVALID_TOKEN=        (0x10000002,    'Invalid access token')
+    E_INVALID_PARAMETERS=   (0x10000003,    'Invalid parameters')
 
     @classmethod
     def IS_SUCCEEDED(cls, errorCode):

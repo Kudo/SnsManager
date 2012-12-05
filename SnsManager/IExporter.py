@@ -4,5 +4,5 @@ class IExporter(object):
     __metaclass__ = ABCMeta
 
     @abstractmethod
-    def getData(self, since=None, until=None):
+    def getData(self, **kwargs):
         pass
