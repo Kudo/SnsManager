@@ -4,7 +4,7 @@ from SnsManager import ErrorCode
 
 class TwitterBase(SnsBase):
     def __init__(self, *args, **kwargs):
-        super(self.__class__, self).__init__(*args, **kwargs)
+        super(TwitterBase, self).__init__(*args, **kwargs)
         for k in ['accessTokenSecret', 'consumerKey', 'consumerSecret']:
             if k not in kwargs:
                 raise ValueError('Invalid parameters.')
