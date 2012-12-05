@@ -75,6 +75,9 @@ class TwitterExporter(TwitterBase, IExporter):
 
         retDict['lastSyncId'] = retLastSyncId
         retDict['count'] = len(retDict['data'])
-        retDict['retCode'] = ErrorCode.S_OK
+        if retDict['count'] == 0:
+            retDict['retCode'] = ErrorCode.E_NO_DATA
+        else:
+            retDict['retCode'] = ErrorCode.S_OK
 
         return retDict
