@@ -28,7 +28,7 @@ class FbExporter(FbBase, IExporter):
         self._multiApiCrawlerSince = kwargs['multiApiCrawlerSince'] if 'multiApiCrawlerSince' in kwargs else dateParser.parse('2010-12-31')
         self.verbose = kwargs['verbose'] if 'verbose' in kwargs else False
 
-    def getData(self, since=None, until=None):
+    def getData(self, **kwargs):
         """
         Get data from Facebook feed
 
@@ -69,6 +69,8 @@ class FbExporter(FbBase, IExporter):
             'count': 0,
             'data': {},
         }
+        since = kwargs.get('since', None)
+        until = kwargs.get('until', None)
 
         if not until:
             until = datetime.now() - timedelta(1)

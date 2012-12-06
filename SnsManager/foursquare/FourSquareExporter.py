@@ -19,7 +19,7 @@ class FourSquareExporter(FourSquareBase, IExporter):
         self.verbose = kwargs['verbose'] if 'verbose' in kwargs else False
 
 
-    def getData(self, since=None, until=None):
+    def getData(self, **kwargs):
         """
         Get data from foursquare /users/checkins
 
@@ -61,6 +61,8 @@ class FourSquareExporter(FourSquareBase, IExporter):
             'count': 0,
             'data': [],
         }
+        since = kwargs.get('since', None)
+        until = kwargs.get('until', None)
 
         if not until:
             until = datetime.now() - timedelta(10)
