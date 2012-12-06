@@ -1,3 +1,4 @@
+import copy
 import tweepy
 from TwitterBase import TwitterBase
 from SnsManager import ErrorCode, IExporter
@@ -27,6 +28,7 @@ class TwitterExporter(TwitterBase, IExporter):
                     }, ...
                 },
                 'count': 30,                    # count in data dic
+                'lastSyncId': {'user_timeline': 123, ...},      # last synced id
                 'retCode': ErrorCode.S_OK,    # returned code which is instance of ErrorCode
 
             }
@@ -34,6 +36,7 @@ class TwitterExporter(TwitterBase, IExporter):
         retDict = {
             'retCode': ErrorCode.E_FAILED,
             'count': 0,
+            'lastSyncId': None,
             'data': {},
         }
         lastSyncId = kwargs.get('lastSyncId', None)
@@ -48,9 +51,10 @@ class TwitterExporter(TwitterBase, IExporter):
         if not self.myId:
             return retDict
 
-        retLastSyncId = {}
+        retLastSyncId = copy.copy(lastSyncId) or {}
         for api in self._API_LIST:
-            retLastSyncId[api] = None
+            if api not in retLastSyncId:
+                retLastSyncId[api] = None
             if exportDirection == self.EXPORT_DIRECTION_BACKWARD:
                 params = {}
                 if type(lastSyncId) == dict and api in lastSyncId:
