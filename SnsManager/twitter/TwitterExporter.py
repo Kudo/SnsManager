@@ -19,6 +19,7 @@ class TwitterExporter(TwitterBase, IExporter):
         In:
             lastSyncId *optional*       --  The last synced ID which is a dict type for different API's ID.
             exportDirection             --  self.EXPORT_DIRECTION_FORWARD or self.EXPORT_DIRECTION_BACKWARD
+            limit *optional*            --  The record limit to export (only usable of EXPORT_DIRECTION_BACKWARD)
 
         Out:
             Return a python dict object
