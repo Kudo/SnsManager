@@ -966,7 +966,7 @@ class FbExporter(FbBase, IExporter):
                 self.outerObj._logger.exception('Unable to get data from Facebook')
                 return ErrorCode.E_FAILED, {}
             retDict = json.loads(conn.data)
-            if 'data' not in retDict or 'paging' not in retDict or len(retDict['data']) == 0:
+            if 'data' not in retDict or len(retDict['data']) == 0:
                 return ErrorCode.E_NO_DATA, {}
             return ErrorCode.S_OK, retDict
 
