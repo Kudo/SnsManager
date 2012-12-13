@@ -966,7 +966,7 @@ class FbExporter(FbBase, IExporter):
                 self.outerObj._logger.exception('Unable to get data from Facebook')
                 return ErrorCode.E_FAILED, {}
             retDict = json.loads(conn.data)
-            if 'data' not in retDict or 'paging' not in retDict or len(retDict['data']) == 0:
+            if 'data' not in retDict or len(retDict['data']) == 0:
                 return ErrorCode.E_NO_DATA, {}
             return ErrorCode.S_OK, retDict
 
@@ -981,3 +981,71 @@ class FbExporter(FbBase, IExporter):
             return retList
 
 
+class FbLikedUrlExporter(FbBase, IExporter):
+    def __init__(self, *args, **kwargs):
+        super(FbLikedUrlExporter, self).__init__(*args, **kwargs)
+        self.verbose = kwargs['verbose'] if 'verbose' in kwargs else False
+        self._data = []
+        self.offset = 0
+        self.limit = kwargs.get('limit', 100)
+
+    def _fqlCrawler(self, fql):
+        params = {
+            'access_token' : self._accessToken,
+            'q': fql,
+        }
+
+        uri = '{0}fql?{1}'.format(self._graphUri, urllib.urlencode(params))
+        self._logger.debug('FQL URI to retrieve [%s]' % uri)
+        try:
+            conn = self._httpConn.urlopen('GET', uri, timeout=self._timeout)
+        except:
+            self._logger.exception('Unable to get data from Facebook')
+            return ErrorCode.E_FAILED, {}
+        try:
+            retDict = json.loads(conn.data)
+        except ValueError:
+            self._logger.info('Unable to parse returned data. conn.data[%s]' % conn.data)
+            return ErrorCode.E_FAILED, {}
+        if 'data' not in retDict:
+            return ErrorCode.E_NO_DATA, {}
+        return ErrorCode.S_OK, retDict
+
+    def getData(self, **kwargs):
+        return self
+
+    def _composeFql(self):
+        fql = 'SELECT url FROM url_like WHERE user_id=me()'
+        if self.offset and self.limit:
+            fql += ' LIMIT %d, %d' % (self.offset, self.limit)
+        elif self.limit:
+            fql += ' LIMIT %d' % (self.limit)
+        return fql
+
+    def _retrieveData(self):
+        fql = self._composeFql()
+        retCode, retDict = self._fqlCrawler(fql)
+        if retDict:
+            self._data = [entity['url'] for entity in retDict['data']]
+
+        if self._data and len(self._data) > 0:
+            self.offset += self.limit
+            return True
+        else:
+            return False
+
+    def __iter__(self):
+        return self
+
+    def next(self):
+        try:
+            data = self._data.pop(0)
+            return data
+        except IndexError as e:
+            if not self._retrieveData():
+                raise StopIteration
+            else:
+                data = self._data.pop(0)
+                return data
+        except:
+            raise AssertionError('CODE FLOW SHOULD NOT GO TO HERE.')
