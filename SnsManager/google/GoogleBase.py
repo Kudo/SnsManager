@@ -12,13 +12,14 @@ class GoogleBase(SnsBase):
                 raise ValueError('Invalid parameters.')
             setattr(self, '_' + k, kwargs[k])
 
-        self.myId = self.getMyId()
         self._userAgent = 'Waveface AOStream/1.0'
         self._tokenUri = 'https://accounts.google.com/o/oauth2/token'
 
         self._http = httplib2.Http()
-        credentials = OAuth2Credentials(self._accessToken, self._clientId, self._clientSecret, self._refreshToken, None, self._tokenUri, self._userAgent)
-        self._http = credentials.authorize(self._http)
+        self.credentials = OAuth2Credentials(self._accessToken, self._clientId, self._clientSecret, self._refreshToken, None, self._tokenUri, self._userAgent)
+        self._http = self.credentials.authorize(self._http)
+
+        self.myId = self.getMyId()
 
     def getMyId(self):
         try:
