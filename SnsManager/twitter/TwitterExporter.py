@@ -75,6 +75,7 @@ class TwitterExporter(TwitterBase, IExporter):
                         'include_entities': True,
                         'since_id': lastSyncId[api],
                     }
+                    retLastSyncId[api] = None
                     for status in tweepy.Cursor(getattr(self._tweepy, api), **params).items():
                         if not retLastSyncId[api]:
                             retLastSyncId[api] = status.id
@@ -83,6 +84,8 @@ class TwitterExporter(TwitterBase, IExporter):
                 else:
                     # for FORWARD sync with no lastSyncId case, we would only to retrieve latest item's id.
                     for firstStatus in tweepy.Cursor(getattr(self._tweepy, api)).items(limit=1):
+                        parsedData = self._parseData(api, firstStatus)
+                        retDict['data'][parsedData['id']] = parsedData
                         retLastSyncId[api] = firstStatus.id
 
         retDict['lastSyncId'] = retLastSyncId
