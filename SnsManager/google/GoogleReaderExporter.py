@@ -81,7 +81,6 @@ class GoogleReaderExporter(GoogleBase, IExporter):
                 params = {'loadLimit': 1}
 
             gReaderContainer.loadItems(**params)
-            retLastSyncId[service] = None
             for item in gReaderContainer.items:
                 if not retLastSyncId[service]:
                     retLastSyncId[service] = str(item.time)
