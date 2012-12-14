@@ -63,7 +63,7 @@ class GoogleReaderExporter(GoogleBase, IExporter):
                 'loadLimit': limit,
             }
             if type(lastSyncId) == dict and service in lastSyncId:
-                params['until'] = lastSyncId[service] - 1
+                params['until'] = int(lastSyncId[service]) - 1
 
             gReaderContainer.loadItems(**params)
             for item in gReaderContainer.items:
@@ -74,7 +74,7 @@ class GoogleReaderExporter(GoogleBase, IExporter):
             if type(lastSyncId) == dict and service in lastSyncId:
                 params = {
                     'loadLimit': limit,
-                    'since': lastSyncId[service] + 1,
+                    'since': int(lastSyncId[service]) + 1,
                 }
             else:
                 # for FORWARD sync with no lastSyncId case, we would only to retrieve latest item's id.
