@@ -64,26 +64,28 @@ class TwitterExporter(TwitterBase, IExporter):
                     'include_entities': True,
                 }
                 if type(lastSyncId) == dict and api in lastSyncId:
-                    params['max_id'] = lastSyncId[api] - 1
+                    params['max_id'] = int(lastSyncId[api]) - 1
                 for status in tweepy.Cursor(getattr(self._tweepy, api), **params).items(limit=limit):
                     parsedData = self._parseData(api, status)
-                    retLastSyncId[api] = status.id
+                    retLastSyncId[api] = str(status.id)
                     retDict['data'][parsedData['id']] = parsedData
             else:
                 if type(lastSyncId) == dict and api in lastSyncId:
                     params = {
                         'include_entities': True,
-                        'since_id': lastSyncId[api],
+                        'since_id': int(lastSyncId[api]),
                     }
-                    for status in tweepy.Cursor(getattr(self._tweepy, api), **params).items():
-                        if not retLastSyncId[api]:
-                            retLastSyncId[api] = status.id
-                        parsedData = self._parseData(api, status)
-                        retDict['data'][parsedData['id']] = parsedData
+                    itemParams = {}
                 else:
                     # for FORWARD sync with no lastSyncId case, we would only to retrieve latest item's id.
-                    for firstStatus in tweepy.Cursor(getattr(self._tweepy, api)).items(limit=1):
-                        retLastSyncId[api] = firstStatus.id
+                    params = {'include_entities': True}
+                    itemParams = {'limit' : 1}
+
+                for status in tweepy.Cursor(getattr(self._tweepy, api), **params).items(**itemParams):
+                    if not retLastSyncId[api]:
+                        retLastSyncId[api] = str(status.id)
+                    parsedData = self._parseData(api, status)
+                    retDict['data'][parsedData['id']] = parsedData
 
         retDict['lastSyncId'] = retLastSyncId
         retDict['count'] = len(retDict['data'])
@@ -96,7 +98,7 @@ class TwitterExporter(TwitterBase, IExporter):
 
     def _parseData(self, apiName, status):
         data = {
-            'id': status.id,
+            'id': str(status.id),
             'message': status.text,
             'createdTime': status.created_at,
             'type': apiName,
