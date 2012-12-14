@@ -68,7 +68,7 @@ class GoogleReaderExporter(GoogleBase, IExporter):
             gReaderContainer.loadItems(**params)
             for item in gReaderContainer.items:
                 parsedData = self._parseData(item)
-                retLastSyncId[service] = item.time
+                retLastSyncId[service] = str(item.time)
                 retDict['data'][parsedData['id']] = parsedData
         else:
             if type(lastSyncId) == dict and service in lastSyncId:
@@ -84,7 +84,7 @@ class GoogleReaderExporter(GoogleBase, IExporter):
             retLastSyncId[service] = None
             for item in gReaderContainer.items:
                 if not retLastSyncId[service]:
-                    retLastSyncId[service] = item.time
+                    retLastSyncId[service] = str(item.time)
                 parsedData = self._parseData(item)
                 retDict['data'][parsedData['id']] = parsedData
 
@@ -99,7 +99,7 @@ class GoogleReaderExporter(GoogleBase, IExporter):
 
     def _parseData(self, item):
         data = {
-            'id': item.time,
+            'id': str(item.time),
             'createdTime': datetime.fromtimestamp(item.time),
             'links': [item.url],
         }
