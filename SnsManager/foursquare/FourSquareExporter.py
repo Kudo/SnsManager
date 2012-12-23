@@ -59,7 +59,7 @@ class FourSquareExporter(FourSquareBase, IExporter):
         retDict = {
             'retCode': ErrorCode.E_FAILED,
             'count': 0,
-            'data': [],
+            'data':{},
         }
 
         if not until:
@@ -92,9 +92,13 @@ class FourSquareExporter(FourSquareBase, IExporter):
                 break
             if 'venue' not in item:
                 continue
+            if 'id' not in item:
+                continue
+            theId = item['id']
             shout = item['shout'] if 'shout' in item else None
             venue = item['venue']
             place = { 'name': venue['name'] }
+            createdAt = datetime.fromtimestamp(item['createdAt'])
             if 'location' in venue:
                 place['latitude'] = venue['location']['lat'] 
                 place['longitude'] = venue['location']['lng'] 
@@ -106,11 +110,12 @@ class FourSquareExporter(FourSquareBase, IExporter):
                         continue
                     person = self.getUserData(user_id=entity['id'])
                     people.append(person)
-            retDict['data'].append({
+            retDict['data'][theId] = {
                     'message': shout,
                     'place': place,
+                    'createdTime': createdAt,
                     'people': people
-            })
+            }
         retDict['count'] = len(retDict['data'])
         retDict['retCode'] = ErrorCode.S_OK
 

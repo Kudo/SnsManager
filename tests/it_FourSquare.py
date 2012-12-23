@@ -8,7 +8,7 @@ import unittest
 from SnsManager import ErrorCode
 from SnsManager.foursquare import FourSquareBase, FourSquareExporter
 
-TEST_TOKEN = 'TEST_TOKEN'
+TEST_TOKEN = '0KEU2ABNO4Y31NXORDIRUFTMJKADS4RMWELMN2QMDN0UWZEO'
 
 class TestFourSquareBase(unittest.TestCase):
     def test_GetMyId_GivenValidToken_True(self):
@@ -32,7 +32,7 @@ class TestFourSquareBase(unittest.TestCase):
     def test_getData_MULTIPLE_DATA(self):
         obj = FourSquareExporter(accessToken=TEST_TOKEN)
         currDatetime = datetime.datetime.now()
-        tendayBefore = currDatetime - datetime.timedelta(1)
+        tendayBefore = currDatetime - datetime.timedelta(10)
         ret = obj.getData(since=currDatetime, until=tendayBefore)
         self.assertIsNotNone(ret)
         self.assertTrue(ret['count'] > 0)
