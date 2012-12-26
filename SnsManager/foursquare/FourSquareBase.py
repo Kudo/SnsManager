@@ -35,10 +35,10 @@ class FourSquareBase(SnsBase):
                 'id': user['id'],
             }
             if 'photo' in user:
-                if isinstance(user['photo'], unicode):
-                    retDict['avatar'] = user['photo']
-                else:
+                if isinstance(user['photo'], dict):
                     retDict['avatar'] = "{0}{1}".format(user['photo']['prefix'], user['photo']['suffix'])
+                else:
+                    retDict['avatar'] = user['photo']
     
             return retDict
         except:
