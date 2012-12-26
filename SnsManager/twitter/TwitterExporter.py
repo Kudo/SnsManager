@@ -71,6 +71,7 @@ class TwitterExporter(TwitterBase, IExporter):
                     retDict['data'][parsedData['id']] = parsedData
             else:
                 if type(lastSyncId) == dict and api in lastSyncId:
+                    retLastSyncId[api] = None
                     params = {
                         'include_entities': True,
                         'since_id': int(lastSyncId[api]),
@@ -87,7 +88,10 @@ class TwitterExporter(TwitterBase, IExporter):
                     parsedData = self._parseData(api, status)
                     retDict['data'][parsedData['id']] = parsedData
 
-        retDict['lastSyncId'] = retLastSyncId
+                if not retLastSyncId[api]:
+                    del retLastSyncId[api]
+
+        retDict['lastSyncId'] = retLastSyncId if retLastSyncId else None
         retDict['count'] = len(retDict['data'])
         if retDict['count'] == 0:
             retDict['retCode'] = ErrorCode.E_NO_DATA

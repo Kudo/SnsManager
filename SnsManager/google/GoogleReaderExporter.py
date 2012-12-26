@@ -72,6 +72,7 @@ class GoogleReaderExporter(GoogleBase, IExporter):
                 retDict['data'][parsedData['id']] = parsedData
         else:
             if type(lastSyncId) == dict and service in lastSyncId:
+                retLastSyncId[service] = None
                 params = {
                     'loadLimit': limit,
                     'since': int(lastSyncId[service]) + 1,
@@ -87,7 +88,10 @@ class GoogleReaderExporter(GoogleBase, IExporter):
                 parsedData = self._parseData(item)
                 retDict['data'][parsedData['id']] = parsedData
 
-        retDict['lastSyncId'] = retLastSyncId
+            if not retLastSyncId[service]:
+                del retLastSyncId[service]
+
+        retDict['lastSyncId'] = retLastSyncId if retLastSyncId else None
         retDict['count'] = len(retDict['data'])
         if retDict['count'] == 0:
             retDict['retCode'] = ErrorCode.E_NO_DATA
