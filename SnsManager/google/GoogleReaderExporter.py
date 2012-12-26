@@ -87,7 +87,10 @@ class GoogleReaderExporter(GoogleBase, IExporter):
                 parsedData = self._parseData(item)
                 retDict['data'][parsedData['id']] = parsedData
 
-        retDict['lastSyncId'] = retLastSyncId
+            if not retLastSyncId[service]:
+                del retLastSyncId[service]
+
+        retDict['lastSyncId'] = retLastSyncId if retLastSyncId else None
         retDict['count'] = len(retDict['data'])
         if retDict['count'] == 0:
             retDict['retCode'] = ErrorCode.E_NO_DATA
