@@ -71,6 +71,7 @@ class TwitterExporter(TwitterBase, IExporter):
                     retDict['data'][parsedData['id']] = parsedData
             else:
                 if type(lastSyncId) == dict and api in lastSyncId:
+                    retLastSyncId[api] = None
                     params = {
                         'include_entities': True,
                         'since_id': int(lastSyncId[api]),

@@ -72,6 +72,7 @@ class GoogleReaderExporter(GoogleBase, IExporter):
                 retDict['data'][parsedData['id']] = parsedData
         else:
             if type(lastSyncId) == dict and service in lastSyncId:
+                retLastSyncId[service] = None
                 params = {
                     'loadLimit': limit,
                     'since': int(lastSyncId[service]) + 1,
