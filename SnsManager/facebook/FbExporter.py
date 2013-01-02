@@ -480,6 +480,14 @@ class FbExporter(FbBase, IExporter):
             # album type's link usually could not access outside, so we will not export link for photo type
             ret['links'] = []
 
+            place = self._getGpsInfo(data)
+            if place:
+                ret['place'] = place
+
+            people = self._getTagPeople(data)
+            if people:
+                ret['people'] = people
+
             ret['photos'] = []
             # FIXME: Currently Facebook do not have formal way to retrieve album id from news feed, so we parse from link
             searchResult = re.search('^https?://www\.facebook\.com\/photo\.php\?.+&set=a\.(\d+?)\.', data['link'])
