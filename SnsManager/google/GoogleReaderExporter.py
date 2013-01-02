@@ -88,8 +88,8 @@ class GoogleReaderExporter(GoogleBase, IExporter):
                 parsedData = self._parseData(item)
                 retDict['data'][parsedData['id']] = parsedData
 
-            if not retLastSyncId[service]:
-                del retLastSyncId[service]
+        if not retLastSyncId[service]:
+            del retLastSyncId[service]
 
         retDict['lastSyncId'] = retLastSyncId if retLastSyncId else None
         retDict['count'] = len(retDict['data'])
