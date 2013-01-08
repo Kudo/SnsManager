@@ -88,8 +88,8 @@ class TwitterExporter(TwitterBase, IExporter):
                     parsedData = self._parseData(api, status)
                     retDict['data'][parsedData['id']] = parsedData
 
-                if not retLastSyncId[api]:
-                    del retLastSyncId[api]
+            if not retLastSyncId[api]:
+                del retLastSyncId[api]
 
         retDict['lastSyncId'] = retLastSyncId if retLastSyncId else None
         retDict['count'] = len(retDict['data'])
