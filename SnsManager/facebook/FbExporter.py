@@ -14,6 +14,9 @@ from FbBase import FbBase
 from SnsManager import ErrorCode, IExporter
 
 class FbExporter(FbBase, IExporter):
+    FB_PHOTO_SIZE_TYPE_MAXIMUM = 0
+    FB_PHOTO_SIZE_TYPE_MEDIUM = 1
+
     def __init__(self, *args, **kwargs):
         """
         Constructor of FbExporter
@@ -27,7 +30,6 @@ class FbExporter(FbBase, IExporter):
         self._tmpFolder = kwargs['tmpFolder'] if 'tmpFolder' in kwargs else '/tmp'
         self._multiApiCrawlerSince = kwargs['multiApiCrawlerSince'] if 'multiApiCrawlerSince' in kwargs else dateParser.parse('2010-12-31')
         self.verbose = kwargs['verbose'] if 'verbose' in kwargs else False
-        self._wfUser = kwargs.get('user', None)
 
     def getData(self, **kwargs):
         """
@@ -72,6 +74,7 @@ class FbExporter(FbBase, IExporter):
         }
         since = kwargs.get('since', None)
         until = kwargs.get('until', None)
+        self._setFbPhotoSizeType(kwargs.get('fbPhotoSizeType', self.FB_PHOTO_SIZE_TYPE_MAXIMUM))
 
         if not until:
             until = datetime.now() - timedelta(1)
@@ -154,6 +157,12 @@ class FbExporter(FbBase, IExporter):
         retDict['count'] = len(retDict['data'])
         retDict['retCode'] = ErrorCode.S_OK
         return retDict
+
+    def _setFbPhotoSizeType(self, _fbPhotoSizeType):
+        if _fbPhotoSizeType == self.FB_PHOTO_SIZE_TYPE_MEDIUM:
+            self.fbPhotoSizeType = self.FB_PHOTO_SIZE_TYPE_MEDIUM
+        else:
+            self.fbPhotoSizeType = self.FB_PHOTO_SIZE_TYPE_MAXIMUM
 
     def _apiHandlerFactory(self, api):
         if api == 'feed':
@@ -254,9 +263,6 @@ class FbExporter(FbBase, IExporter):
         return ErrorCode.S_OK
 
     class FbApiHandlerBase(object):
-        FB_PHOTO_SIZE_TYPE_MAXIMUM = 0
-        FB_PHOTO_SIZE_TYPE_MEDIUM = 1
-
         def __init__(self, *args, **kwargs):
             self.outerObj = kwargs.get('outerObj')
             self._data = kwargs.get('data', None)
@@ -367,14 +373,10 @@ class FbExporter(FbBase, IExporter):
                 self.outerObj._logger.exception('Unable to get object from Facebook. uri[%s]' % (uri))
                 return None
             if type(resp) == dict and 'images' in resp:
-                photoSizeType = self.FB_PHOTO_SIZE_TYPE_MAXIMUM
-                if self.outerObj._wfUser:
-                    if self.outerObj._wfUser['isBillingFree']:
-                        photoSizeType = self.FB_PHOTO_SIZE_TYPE_MEDIUM
-                    self.outerObj._logger.debug('isBillingFree[%s] photoSizeType[%d]' % (self.outerObj._wfUser['isBillingFree'], photoSizeType))
+                fbPhotoSizeType = self.outerObj.fbPhotoSizeType
                 # FIXME: Current we assume maximum size photo will be first element in images and medium size will be the second.
-                if len(resp['images']) > photoSizeType and 'source' in resp['images'][photoSizeType]:
-                    return resp['images'][photoSizeType]['source']
+                if len(resp['images']) > fbPhotoSizeType and 'source' in resp['images'][fbPhotoSizeType]:
+                    return resp['images'][fbPhotoSizeType]['source']
             return None
 
         def _getTagPeople(self, data, tagName='with_tags'):
