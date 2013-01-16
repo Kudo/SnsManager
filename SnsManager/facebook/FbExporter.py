@@ -520,6 +520,17 @@ class FbExporter(FbBase, IExporter):
             ret['updatedTime'] = self._convertTimeFormat(data.get('updated_time', data.get('created_time', None)))
             ret['links'] = []
 
+            place = self._getGpsInfo(data)
+            if place:
+                ret['place'] = place
+
+            if isFeedApi:
+                people = self._getTagPeople(data)
+            else:
+                people = self._getTagPeople(data, tagName='tags')
+            if people:
+                ret['people'] = people
+
             ret['photos'] = []
             # FIXME: Currently Facebook do not have API way to get checkin photos, so we list all photos in the album.
             # Please note that this methodology cannot exactly match the checkin photos.
@@ -665,6 +676,7 @@ class FbExporter(FbBase, IExporter):
                 ret['application'] = data['application']['name']
             ret['createdTime'] = self._convertTimeFormat(data.get('created_time', data.get('updated_time', None)))
             ret['updatedTime'] = self._convertTimeFormat(data.get('updated_time', data.get('created_time', None)))
+
             ret['links'] = []
             isFacebookLink = False
             if 'link' in data:
