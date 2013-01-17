@@ -282,10 +282,11 @@ class FbExporter(FbBase, IExporter):
 
                 parsedData = self.parseInner(data)
                 if parsedData:
-                    if data['from']['id'] == self.outerObj.myId:
-                        parsedData['fromMe'] = True
-                    else:
-                        parsedData['fromMe'] = False
+                    if 'fromMe' not in parsedData:
+                        if data['from']['id'] == self.outerObj.myId:
+                            parsedData['fromMe'] = True
+                        else:
+                            parsedData['fromMe'] = False
 
                     if not filterDateInfo:
                         self._dumpData(parsedData)
@@ -354,7 +355,7 @@ class FbExporter(FbBase, IExporter):
             return fPath
 
 
-        def _getFbSizePhotoUri(self, data):
+        def _getFbSizePhotoUri(self, data, retDict):
             idName = None
             for name in ('object_id', 'id'):
                 if name in data:
@@ -372,11 +373,15 @@ class FbExporter(FbBase, IExporter):
             except:
                 self.outerObj._logger.exception('Unable to get object from Facebook. uri[%s]' % (uri))
                 return None
-            if type(resp) == dict and 'images' in resp:
-                fbPhotoSizeType = self.outerObj.fbPhotoSizeType
-                # FIXME: Current we assume maximum size photo will be first element in images and medium size will be the second.
-                if len(resp['images']) > fbPhotoSizeType and 'source' in resp['images'][fbPhotoSizeType]:
-                    return resp['images'][fbPhotoSizeType]['source']
+            if type(resp) == dict:
+                if 'from' in resp and 'id' in resp['from'] and resp['from']['id'] != self.outerObj.myId:
+                    retDict['fromMe'] = False
+
+                if 'images' in resp:
+                    fbPhotoSizeType = self.outerObj.fbPhotoSizeType
+                    # FIXME: Current we assume maximum size photo will be first element in images and medium size will be the second.
+                    if len(resp['images']) > fbPhotoSizeType and 'source' in resp['images'][fbPhotoSizeType]:
+                        return resp['images'][fbPhotoSizeType]['source']
             return None
 
         def _getTagPeople(self, data, tagName='with_tags'):
@@ -576,9 +581,6 @@ class FbExporter(FbBase, IExporter):
                 ret['id'] = data['id']
             else:
                 ret['id'] = '%s_%s' % (self.outerObj.myId, data['id'])
-            params = {
-                'access_token' : self.outerObj._accessToken,
-            }
 
             ret['message'] = data.get('message', None) or data.get('story', None)
             if 'application' in data:
@@ -597,7 +599,7 @@ class FbExporter(FbBase, IExporter):
             if people:
                 ret['people'] = people
 
-            imgUri = self._getFbSizePhotoUri(data)
+            imgUri = self._getFbSizePhotoUri(data, ret)
             if not imgUri and 'picture' in data:
                 imgUri = data['picture']
             imgPath = self._imgLinkHandler(imgUri)
@@ -630,7 +632,7 @@ class FbExporter(FbBase, IExporter):
                 ret['people'] = people
 
             ret['photos'] = []
-            imgUri = self._getFbSizePhotoUri(data)
+            imgUri = self._getFbSizePhotoUri(data, ret)
             if not imgUri and 'picture' in data:
                 imgUri = data['picture']
             imgPath = self._imgLinkHandler(imgUri)
@@ -934,7 +936,7 @@ class FbExporter(FbBase, IExporter):
                         retDict['count'] += len(parsedData)
                         return retDict
 
-                    imgUri = self._getFbSizePhotoUri(data)
+                    imgUri = self._getFbSizePhotoUri(data, retDict)
                     imgPath = self._imgLinkHandler(imgUri)
                     if imgPath:
                         parsedData.append(imgPath)
