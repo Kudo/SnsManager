@@ -639,8 +639,10 @@ class FbExporter(FbBase, IExporter):
             ret['photos'] = []
 
             obj = self._getObject(data)
-            infoSrc = obj if obj else data
+            if 'from' in obj and 'id' in obj['from'] and obj['from']['id'] != self.outerObj.myId:
+                ret['fromMe'] = False
 
+            infoSrc = obj if obj else data
             place = self._getGpsInfo(infoSrc)
             if place:
                 ret['place'] = place
