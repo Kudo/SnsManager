@@ -386,11 +386,15 @@ class FbExporter(FbBase, IExporter):
             return None
 
         def _getTagPeople(self, data, tagName='with_tags'):
-            people = []
+            people = [{
+                'id': data['from']['id'],
+                'name': data['from']['name'],
+                'avatar': '{0}{1}/picture'.format(self.outerObj._graphUri, data['from']['id']),
+            }]
 
             if tagName in data:
                 if 'data' in data[tagName] and len(data[tagName]['data']) > 0:
-                    people = [{
+                    people += [{
                         'id': person['id'],
                         'name': person['name'],
                         'avatar': '{0}{1}/picture'.format(self.outerObj._graphUri, person['id']),
@@ -400,6 +404,7 @@ class FbExporter(FbBase, IExporter):
                     for morePeople in self._getMoreTagPeople(nextUrl):
                         people += morePeople
 
+            people = [person for person in people if person['id'] != self.outerObj.myId]
             return people
 
         def _getMoreTagPeople(self, nextUrl):
