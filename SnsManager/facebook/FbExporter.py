@@ -88,7 +88,9 @@ class FbExporter(FbBase, IExporter):
             return retDict
 
         # Please make sure feed placed in first api call, since we are now havve more confident for feed API data
-        for api in ['feed', 'statuses', 'checkins', 'videos', 'links', 'notes']:
+        # Do not handle video currently
+        #for api in ['feed', 'statuses', 'checkins', 'videos', 'links', 'notes']:
+        for api in ['feed', 'statuses', 'checkins', 'links', 'notes']:
             if api != 'feed' and self._multiApiCrawlerSince and (not since or since > self._multiApiCrawlerSince):
                 _since = self._multiApiCrawlerSince
                 if _since < until:
@@ -454,7 +456,6 @@ class FbExporter(FbBase, IExporter):
                     ret['id'] = data['id']
                 else:
                     ret['id'] = '%s_%s' % (self.outerObj.myId, data['id'])
-                ret['type'] = 'text'
                 ret['message'] = data['message']
                 ret['caption'] = data.get('caption', None)
                 ret['createdTime'] = self._convertTimeFormat(data.get('created_time', data.get('updated_time', None)))
@@ -512,7 +513,6 @@ class FbExporter(FbBase, IExporter):
                 ret['id'] = data['id']
             else:
                 ret['id'] = '%s_%s' % (self.outerObj.myId, data['id'])
-            ret['type'] = 'image'
             ret['message'] = data.get('message', None)
             # album type's caption is photo numbers, so we will not export caption for album
             ret['caption'] = None
@@ -555,7 +555,6 @@ class FbExporter(FbBase, IExporter):
                 ret['id'] = data['id']
             else:
                 ret['id'] = '%s_%s' % (self.outerObj.myId, data['id'])
-            ret['type'] = 'checkin'
             ret['message'] = data.get('message', None)
             ret['caption'] = None
 
@@ -616,7 +615,6 @@ class FbExporter(FbBase, IExporter):
             else:
                 ret['id'] = '%s_%s' % (self.outerObj.myId, data['id'])
 
-            ret['type'] = 'image'
             ret['message'] = data.get('message', None) or data.get('story', None)
             if 'application' in data:
                 ret['application'] = data['application']['name']
@@ -654,7 +652,6 @@ class FbExporter(FbBase, IExporter):
                 ret['id'] = data['id']
             else:
                 ret['id'] = '%s_%s' % (self.outerObj.myId, data['id'])
-            ret['type'] = 'image'
             ret['message'] = data.get('message', None)
             ret['caption'] = data.get('caption', None)
             if 'application' in data:
@@ -692,7 +689,6 @@ class FbExporter(FbBase, IExporter):
                 ret['id'] = data['id']
             else:
                 ret['id'] = '%s_%s' % (self.outerObj.myId, data['id'])
-            ret['type'] = 'link'
             ret['message'] = data.get('message', None)
             ret['description'] = data.get('description', None)  # Link description
             ret['name'] = data.get('name', None)    # Link name
@@ -741,7 +737,6 @@ class FbExporter(FbBase, IExporter):
                 ret['id'] = data['id']
             else:
                 ret['id'] = '%s_%s' % (self.outerObj.myId, data['id'])
-            ret['type'] = 'text'
             ret['message'] = data.get('name', None) or data.get('subject', None)
             content = data.get('description', None) or data.get('message', None)
             if content:
@@ -774,7 +769,6 @@ class FbExporter(FbBase, IExporter):
                 ret['id'] = data['id']
             else:
                 ret['id'] = '%s_%s' % (self.outerObj.myId, data['id'])
-            ret['type'] = 'video'
             ret['message'] = data.get('message', None) or data.get('name', None)
             # Link's caption usually is the link, so we will not export caption here.
             ret['caption'] = None
@@ -809,7 +803,6 @@ class FbExporter(FbBase, IExporter):
                 ret['id'] = data['id']
             else:
                 ret['id'] = '%s_%s' % (self.outerObj.myId, data['id'])
-            ret['type'] = 'checkin'
             ret['message'] = data.get('message', None)
             if isFeedApi:
                 ret['caption'] = data['caption']
@@ -879,7 +872,9 @@ class FbExporter(FbBase, IExporter):
                 else:
                     return self._dataParserPhoto
             elif fType == 'video':
-                return self._dataParserVideo
+                # Do not handle video currently
+                return None
+                #return self._dataParserVideo
             elif fType == 'checkin':
                 return self._dataParserCheckin
             return None
