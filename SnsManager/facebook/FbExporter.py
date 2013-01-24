@@ -444,27 +444,6 @@ class FbExporter(FbBase, IExporter):
                     place['longitude'] = data['place']['location']['longitude']
             return place
 
-        def _getVideoTag(self, data, tagName='tags', objectIdName='object_id'):
-            """
-            To get video tags, we should get from video object due to feed data do not always expose those information.
-            """
-            if objectIdName not in data:
-                return None
-            params = {
-                'access_token' : self.outerObj._accessToken,
-                'fields': 'tags',
-            }
-            uri = '{0}{1}?{2}'.format(self.outerObj._graphUri, data[objectIdName], urllib.urlencode(params))
-            try:
-                conn = self.outerObj._httpConn.urlopen('GET', uri, timeout=self.outerObj._timeout)
-                resp = json.loads(conn.data)
-            except:
-                self.outerObj._logger.exception('Unable to get object from Facebook. uri[%s]' % (uri))
-                return None
-            if type(resp) == dict:
-                return self._getTagPeople(resp, tagName)
-            return None
-
         def _dataParserStatus(self, data, isFeedApi=True):
             ret = None
             # For status + story case, it might be event commenting to friend or adding friend
@@ -807,7 +786,9 @@ class FbExporter(FbBase, IExporter):
             if isFeedApi:
                 if 'link' in data:
                     ret['links'].append(data['link'])
-                people = self._getVideoTag(data)
+                obj = self._getObject(data)
+                infoSrc = obj if obj else data
+                people = self._getTagPeople(infoSrc, tagName='tags')
                 if people:
                     ret['people'] = people
             else:
