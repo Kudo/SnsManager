@@ -88,7 +88,9 @@ class FbExporter(FbBase, IExporter):
             return retDict
 
         # Please make sure feed placed in first api call, since we are now havve more confident for feed API data
-        for api in ['feed', 'statuses', 'checkins', 'videos', 'links', 'notes']:
+        # Do not handle video currently
+        #for api in ['feed', 'statuses', 'checkins', 'videos', 'links', 'notes']:
+        for api in ['feed', 'statuses', 'checkins', 'links', 'notes']:
             if api != 'feed' and self._multiApiCrawlerSince and (not since or since > self._multiApiCrawlerSince):
                 _since = self._multiApiCrawlerSince
                 if _since < until:
@@ -386,20 +388,25 @@ class FbExporter(FbBase, IExporter):
             return None
 
         def _getTagPeople(self, data, tagName='with_tags'):
-            people = []
+            people = [{
+                'id': data['from']['id'],
+                'name': data['from']['name'],
+                'avatar': '{0}{1}/picture'.format(self.outerObj._graphUri, data['from']['id']),
+            }]
 
             if tagName in data:
                 if 'data' in data[tagName] and len(data[tagName]['data']) > 0:
-                    people = [{
+                    people += [{
                         'id': person['id'],
                         'name': person['name'],
                         'avatar': '{0}{1}/picture'.format(self.outerObj._graphUri, person['id']),
-                    } for person in data[tagName]['data']]
+                    } for person in data[tagName]['data'] if 'id' in person]
                 if 'paging' in data[tagName] and 'next' in data[tagName]['paging'] and data[tagName]['paging']['next']:
                     nextUrl = data[tagName]['paging']['next']
                     for morePeople in self._getMoreTagPeople(nextUrl):
                         people += morePeople
 
+            people = [person for person in people if person['id'] != self.outerObj.myId]
             return people
 
         def _getMoreTagPeople(self, nextUrl):
@@ -420,7 +427,7 @@ class FbExporter(FbBase, IExporter):
                             'id': person['id'],
                             'name': person['name'],
                             'avatar': '{0}{1}/picture'.format(self.outerObj._graphUri, person['id']),
-                        } for person in resp['data']]
+                        } for person in resp['data'] if 'id' in person]
                     else:
                         people = []
                     yield people
@@ -438,27 +445,6 @@ class FbExporter(FbBase, IExporter):
                     place['latitude'] = data['place']['location']['latitude']
                     place['longitude'] = data['place']['location']['longitude']
             return place
-
-        def _getVideoTag(self, data, tagName='tags', objectIdName='object_id'):
-            """
-            To get video tags, we should get from video object due to feed data do not always expose those information.
-            """
-            if objectIdName not in data:
-                return None
-            params = {
-                'access_token' : self.outerObj._accessToken,
-                'fields': 'tags',
-            }
-            uri = '{0}{1}?{2}'.format(self.outerObj._graphUri, data[objectIdName], urllib.urlencode(params))
-            try:
-                conn = self.outerObj._httpConn.urlopen('GET', uri, timeout=self.outerObj._timeout)
-                resp = json.loads(conn.data)
-            except:
-                self.outerObj._logger.exception('Unable to get object from Facebook. uri[%s]' % (uri))
-                return None
-            if type(resp) == dict:
-                return self._getTagPeople(resp, tagName)
-            return None
 
         def _dataParserStatus(self, data, isFeedApi=True):
             ret = None
@@ -794,7 +780,9 @@ class FbExporter(FbBase, IExporter):
             if isFeedApi:
                 if 'link' in data:
                     ret['links'].append(data['link'])
-                people = self._getVideoTag(data)
+                obj = self._getObject(data)
+                infoSrc = obj if obj else data
+                people = self._getTagPeople(infoSrc, tagName='tags')
                 if people:
                     ret['people'] = people
             else:
@@ -884,7 +872,9 @@ class FbExporter(FbBase, IExporter):
                 else:
                     return self._dataParserPhoto
             elif fType == 'video':
-                return self._dataParserVideo
+                # Do not handle video currently
+                return None
+                #return self._dataParserVideo
             elif fType == 'checkin':
                 return self._dataParserCheckin
             return None
