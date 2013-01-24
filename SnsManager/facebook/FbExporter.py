@@ -398,7 +398,7 @@ class FbExporter(FbBase, IExporter):
                         'id': person['id'],
                         'name': person['name'],
                         'avatar': '{0}{1}/picture'.format(self.outerObj._graphUri, person['id']),
-                    } for person in data[tagName]['data']]
+                    } for person in data[tagName]['data'] if 'id' in person]
                 if 'paging' in data[tagName] and 'next' in data[tagName]['paging'] and data[tagName]['paging']['next']:
                     nextUrl = data[tagName]['paging']['next']
                     for morePeople in self._getMoreTagPeople(nextUrl):
@@ -425,7 +425,7 @@ class FbExporter(FbBase, IExporter):
                             'id': person['id'],
                             'name': person['name'],
                             'avatar': '{0}{1}/picture'.format(self.outerObj._graphUri, person['id']),
-                        } for person in resp['data']]
+                        } for person in resp['data'] if 'id' in person]
                     else:
                         people = []
                     yield people
