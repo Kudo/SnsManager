@@ -388,23 +388,25 @@ class FbExporter(FbBase, IExporter):
             return None
 
         def _getTagPeople(self, data, tagName='with_tags'):
+            if tagName not in data:
+                return None
+
             people = [{
                 'id': data['from']['id'],
                 'name': data['from']['name'],
                 'avatar': '{0}{1}/picture'.format(self.outerObj._graphUri, data['from']['id']),
             }]
 
-            if tagName in data:
-                if 'data' in data[tagName] and len(data[tagName]['data']) > 0:
-                    people += [{
-                        'id': person['id'],
-                        'name': person['name'],
-                        'avatar': '{0}{1}/picture'.format(self.outerObj._graphUri, person['id']),
-                    } for person in data[tagName]['data'] if 'id' in person]
-                if 'paging' in data[tagName] and 'next' in data[tagName]['paging'] and data[tagName]['paging']['next']:
-                    nextUrl = data[tagName]['paging']['next']
-                    for morePeople in self._getMoreTagPeople(nextUrl):
-                        people += morePeople
+            if 'data' in data[tagName] and len(data[tagName]['data']) > 0:
+                people += [{
+                    'id': person['id'],
+                    'name': person['name'],
+                    'avatar': '{0}{1}/picture'.format(self.outerObj._graphUri, person['id']),
+                } for person in data[tagName]['data'] if 'id' in person]
+            if 'paging' in data[tagName] and 'next' in data[tagName]['paging'] and data[tagName]['paging']['next']:
+                nextUrl = data[tagName]['paging']['next']
+                for morePeople in self._getMoreTagPeople(nextUrl):
+                    people += morePeople
 
             people = [person for person in people if person['id'] != self.outerObj.myId]
             return people
