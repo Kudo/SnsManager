@@ -544,7 +544,7 @@ class FbExporter(FbBase, IExporter):
                 feedHandler = self.outerObj.FbAlbumFeedsHandler(id=albumId, outerObj=self.outerObj)
                 retPhotos = feedHandler.getPhotos(maxLimit=0, basetime=ret['createdTime'], timerange=timedelta(minutes=20))
                 if ErrorCode.IS_SUCCEEDED(retPhotos['retCode']):
-                    ret['photos'] = retPhotos['data']
+                    ret['photos'] = [d['fPath'] for d in retPhotos['data']]
 
             else:
                 self.outerObj._logger.error('unable to find album set id from link: {0}'.format(data['link']))
@@ -603,7 +603,14 @@ class FbExporter(FbBase, IExporter):
                         feedHandler = self.outerObj.FbAlbumFeedsHandler(id=albumId, outerObj=self.outerObj)
                         retPhotos = feedHandler.getPhotos(maxLimit=0, basetime=ret['createdTime'], timerange=timedelta(minutes=20))
                         if ErrorCode.IS_SUCCEEDED(retPhotos['retCode']):
-                            ret['photos'] = retPhotos['data']
+                            ret['photos'] = [d['fPath'] for d in retPhotos['data']]
+
+                            # Handle if there's no gps/tags info outside, we will try first photo's info
+                            if 'place' not in ret and 'place' in retPhotos['data'][0]:
+                                ret['place'] = retPhotos['data'][0]['place']
+                            if 'people' not in ret and 'people' in retPhotos['data'][0]:
+                                ret['people'] = retPhotos['data'][0]['people']
+
             else:
                 self.outerObj._logger.error('Unable to find photo id from link: {0}'.format(data['link']))
 
@@ -840,15 +847,28 @@ class FbExporter(FbBase, IExporter):
                     dataHandler = self.outerObj.FbAlbumFeedsHandler(id=albumId, outerObj=self.outerObj)
                     retPhotos = dataHandler.getPhotos(maxLimit=0, basetime=ret['createdTime'], timerange=timedelta(minutes=20))
                     if ErrorCode.IS_SUCCEEDED(retPhotos['retCode']):
-                        ret['photos'] = retPhotos['data']
+                        ret['photos'] = [d['fPath'] for d in retPhotos['data']]
+
+                        # Handle if there's no gps/tags info outside, we will try first photo's info
+                        if 'place' not in ret and 'place' in retPhotos['data'][0]:
+                            ret['place'] = retPhotos['data'][0]['place']
+                        if 'people' not in ret and 'people' in retPhotos['data'][0]:
+                            ret['people'] = retPhotos['data'][0]['people']
+
 
             return ret
 
     class FbApiHandlerFeed(FbApiHandlerBase):
+        FB_PHOTO_SUBTYPE_ALBUM = 0
+        FB_PHOTO_SUBTYPE_MULTI_CHECKIN = 1
+        FB_PHOTO_SUBTYPE_TAG_PHOTO = 2
+        FB_PHOTO_SUBTYPE_PHOTO = 3
+
         def parseInner(self, data):
             parser = self._dataParserFactory(data)
             if not parser:
                 return None
+            self.outerObj._logger.info('FbApiHandlerFeed::_dataParserFactory() returned parser: {0}'.format(parser.__name__))
             return parser(data)
 
         def _dataParserFactory(self, data):
@@ -865,11 +885,13 @@ class FbExporter(FbBase, IExporter):
                 else:
                     return self._dataParserLink
             elif fType == 'photo':
-                if self._isAlbum(data):
+                photoSubType = self._getPhotoSubType(data)
+                self.outerObj._logger.info('photoSubType[{0}]'.format(photoSubType))
+                if photoSubType == self.FB_PHOTO_SUBTYPE_ALBUM:
                     return self._dataParserAlbum
-                elif self._isMultiPhotoCheckin(data):
+                elif photoSubType == self.FB_PHOTO_SUBTYPE_MULTI_CHECKIN:
                     return self._dataParserMultiPhotoCheckin
-                elif self._isTagPhoto(data):
+                elif photoSubType == self.FB_PHOTO_SUBTYPE_TAG_PHOTO:
                     return self._dataParserTagPhoto
                 else:
                     return self._dataParserPhoto
@@ -881,41 +903,47 @@ class FbExporter(FbBase, IExporter):
                 return self._dataParserCheckin
             return None
 
-        def _isAlbum(self, data):
-            searchResult = re.search('^https?://www\.facebook\.com\/photo\.php\?.+&set=a\.(\d+?)\.', data['link'])
-            if not searchResult:
-                return False
-            albumId = searchResult.group(1)
-            params = {
-                'access_token' : self.outerObj._accessToken,
-            }
+        def _getPhotoSubType(self, data):
+            # [0] Default type is photo so that we may able to get one image at least.
+            retType = self.FB_PHOTO_SUBTYPE_PHOTO
 
-            uri = '{0}{1}/?{2}'.format(self.outerObj._graphUri, albumId, urllib.urlencode(params))
-            self.outerObj._logger.debug('Album URI to retrieve [%s]' % uri)
-            try:
-                conn = self.outerObj._httpConn.urlopen('GET', uri, timeout=self.outerObj._timeout)
-            except:
-                self.outerObj._logger.exception('Unable to get data from Facebook')
-                return False
-            retDict = json.loads(conn.data)
-            # If album owner is me and it's uploadable, the album is what we should crawl
-            if type(retDict) == dict and 'from' in retDict and type(retDict['from']) == dict and retDict['from']['id'] == self.outerObj.myId:
-                if retDict['can_upload']:
-                    # Check can_upload to filter 'Wall Photos', 'Mobile photos', or something internal albums
-                    return True
-
-            return False
-
-        def _isMultiPhotoCheckin(self, data):
-            searchResult = re.search('^https?://www\.facebook\.com\/photo\.php\?.+&set=pcb\.(\d+?)[.&]', data['link'])
-            if not searchResult:
-                return False
-            return True
-
-        def _isTagPhoto(self, data):
+            # [1] Check tagged photo
             if 'status_type' in data and data['status_type'] == 'tagged_in_photo':
-                return True
-            return False
+                return self.FB_PHOTO_SUBTYPE_TAG_PHOTO
+
+            # [2] Check multi-photo checkin with pcb parameter
+            searchResult = re.search('^https?://www\.facebook\.com\/photo\.php\?.+&set=pcb\.(\d+?)[.&]', data['link'])
+            if searchResult:
+                return self.FB_PHOTO_SUBTYPE_MULTI_CHECKIN
+
+            # [3] Check albums
+            searchResult = re.search('^https?://www\.facebook\.com\/photo\.php\?.+&set=a\.(\d+?)\.', data['link'])
+            if searchResult:
+                albumId = searchResult.group(1)
+                params = {
+                    'access_token' : self.outerObj._accessToken,
+                }
+
+                uri = '{0}{1}/?{2}'.format(self.outerObj._graphUri, albumId, urllib.urlencode(params))
+                self.outerObj._logger.debug('Album URI to retrieve [%s]' % uri)
+                try:
+                    conn = self.outerObj._httpConn.urlopen('GET', uri, timeout=self.outerObj._timeout)
+                except:
+                    self.outerObj._logger.exception('Unable to get data from Facebook')
+                    return retType
+                retDict = json.loads(conn.data)
+
+                # Recently some checkins go to as a album, so we do more check here as assuming there are in 'Mobile Uploads'.
+                if retDict['type'] == 'mobile':
+                    return self.FB_PHOTO_SUBTYPE_MULTI_CHECKIN
+
+                # If album owner is me and it's uploadable, the album is what we should crawl
+                if type(retDict) == dict and 'from' in retDict and type(retDict['from']) == dict and retDict['from']['id'] == self.outerObj.myId:
+                    if retDict['can_upload']:
+                        # Check can_upload to filter 'Wall Photos', 'Mobile Uploads', or something internal albums
+                        return self.FB_PHOTO_SUBTYPE_ALBUM
+
+            return retType
 
     class FbApiHandlerStatuses(FbApiHandlerBase):
         def parseInner(self, data):
@@ -984,7 +1012,16 @@ class FbExporter(FbBase, IExporter):
                     imgUri = self._getFbSizePhotoUri(data)
                     imgPath = self._imgLinkHandler(imgUri)
                     if imgPath:
-                        parsedData.append(imgPath)
+                        _dict = {'fPath': imgPath}
+                        place = self._getGpsInfo(data)
+                        if place:
+                            _dict['place'] = place
+
+                        people = self._getTagPeople(data, tagName='tags')
+                        if people:
+                            _dict['people'] = people
+
+                        parsedData.append(_dict)
 
                 retDict['data'] += parsedData
                 retDict['count'] += len(parsedData)
