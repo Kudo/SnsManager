@@ -1,7 +1,7 @@
 import urllib, urllib2
 import urllib3, urllib3.exceptions
 import json
-from SnsManager.SnsBase import SnsBase
+from SnsManager.SnsBase import SnsBase, ErrorCode
 
 class FbBase(SnsBase):
     def __init__(self, *args, **kwargs):
@@ -76,4 +76,16 @@ class FbBase(SnsBase):
             return ErrorCode.E_FAILED
         if respCode == 200:
             return ErrorCode.S_OK
+
+        try:
+            resp = json.loads(conn.data)
+        except ValueError as e:
+            self._logger.error('Unable to parse returned data. data[{0}] e[{1}]'.format(conn.data, e))
+            return ErrorCode.E_FAILED
+        if 'error' in resp and 'code' in resp['error'] and resp['error']['code'] == 4:
+            self._logger.error('Exceed app request quota, wait for next round.')
+            return ErrorCode.E_REQUESTS_EXCEED_QUOTA
+
+        moreInfoLink = 'https://developers.facebook.com/tools/debug/access_token?q=' + self._accessToken
+        self._logger.info('Invalid token. data[{0}] moreInfoLink[{1}]'.format(conn.data, moreInfoLink))
         return ErrorCode.E_INVALID_TOKEN

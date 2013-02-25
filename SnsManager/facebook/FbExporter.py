@@ -255,6 +255,10 @@ class FbExporter(FbBase, IExporter):
             return ErrorCode.E_FAILED
         if respCode != 200 or len(resp['data']) == 0:
             moreInfoLink = 'https://developers.facebook.com/tools/debug/access_token?q=' + self._accessToken
+            if 'error' in resp and 'code' in resp['error'] and resp['error']['code'] == 4:
+                self._logger.error('Exceed app request quota, wait for next round.')
+                return ErrorCode.E_REQUESTS_EXCEED_QUOTA
+
             self._logger.info('Invalid token. data[{0}] moreInfoLink[{1}]'.format(conn.data, moreInfoLink))
             return ErrorCode.E_INVALID_TOKEN
         for perm in requiredPerms:
