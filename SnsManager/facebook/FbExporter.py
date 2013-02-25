@@ -868,7 +868,7 @@ class FbExporter(FbBase, IExporter):
             parser = self._dataParserFactory(data)
             if not parser:
                 return None
-            self.outerObj._logger.info('FbApiHandlerFeed::_dataParserFactory() returned parser: {0}'.format(parser.__name__))
+            self.outerObj._logger.debug('FbApiHandlerFeed::_dataParserFactory() returned parser: {0}'.format(parser.__name__))
             return parser(data)
 
         def _dataParserFactory(self, data):
@@ -934,7 +934,7 @@ class FbExporter(FbBase, IExporter):
                 retDict = json.loads(conn.data)
 
                 # Recently some checkins go to as a album, so we do more check here as assuming there are in 'Mobile Uploads'.
-                if retDict['type'] == 'mobile':
+                if 'type' in retDict and retDict['type'] == 'mobile':
                     return self.FB_PHOTO_SUBTYPE_MULTI_CHECKIN
 
                 # If album owner is me and it's uploadable, the album is what we should crawl
