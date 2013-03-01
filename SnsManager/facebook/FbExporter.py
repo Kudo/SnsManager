@@ -606,7 +606,7 @@ class FbExporter(FbBase, IExporter):
                         # [1] Retrieve photos in album
                         feedHandler = self.outerObj.FbAlbumFeedsHandler(id=albumId, outerObj=self.outerObj)
                         retPhotos = feedHandler.getPhotos(maxLimit=0, basetime=ret['createdTime'], timerange=timedelta(minutes=20))
-                        if ErrorCode.IS_SUCCEEDED(retPhotos['retCode']):
+                        if ErrorCode.IS_SUCCEEDED(retPhotos['retCode']) and retPhotos['count'] > 0:
                             ret['photos'] = [d['fPath'] for d in retPhotos['data']]
 
                             # Handle if there's no gps/tags info outside, we will try first photo's info
@@ -850,7 +850,7 @@ class FbExporter(FbBase, IExporter):
                     self.outerObj._logger.info("found an albumID from a checkin link: {0}".format(albumId))
                     dataHandler = self.outerObj.FbAlbumFeedsHandler(id=albumId, outerObj=self.outerObj)
                     retPhotos = dataHandler.getPhotos(maxLimit=0, basetime=ret['createdTime'], timerange=timedelta(minutes=20))
-                    if ErrorCode.IS_SUCCEEDED(retPhotos['retCode']):
+                    if ErrorCode.IS_SUCCEEDED(retPhotos['retCode']) and retPhotos['count'] > 0:
                         ret['photos'] = [d['fPath'] for d in retPhotos['data']]
 
                         # Handle if there's no gps/tags info outside, we will try first photo's info
