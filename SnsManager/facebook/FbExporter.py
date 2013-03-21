@@ -447,7 +447,7 @@ class FbExporter(FbBase, IExporter):
             place = None
             if 'place' in data:
                 place = { 'name': data['place']['name'] }
-                if 'location' in data['place']:
+                if 'location' in data['place'] and 'latitude' in data['place']['location'] and 'longitude' in data['place']['location']:
                     place['latitude'] = data['place']['location']['latitude']
                     place['longitude'] = data['place']['location']['longitude']
             return place
