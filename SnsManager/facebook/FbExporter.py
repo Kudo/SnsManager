@@ -1052,10 +1052,13 @@ class FbExporter(FbBase, IExporter):
             self.outerObj._logger.debug('photos URI to retrieve [%s]' % uri)
             try:
                 conn = self.outerObj._httpConn.urlopen('GET', uri, timeout=self.outerObj._timeout)
-            except:
-                self.outerObj._logger.exception('Unable to get data from Facebook')
+                retDict = json.loads(conn.data)
+            except urllib3.exceptions.HTTPError as e:
+                self.outerObj._logger.error('Unable to get data from Facebook - e[{0}]'.format(e))
                 return ErrorCode.E_FAILED, {}
-            retDict = json.loads(conn.data)
+            except ValueError as e:
+                self._logger.error('Unable to parse returned data. data[{0}] e[{1}]'.format(conn.data, e))
+                return ErrorCode.E_FAILED, {}
             if 'data' not in retDict or len(retDict['data']) == 0:
                 return ErrorCode.E_NO_DATA, {}
             return ErrorCode.S_OK, retDict
